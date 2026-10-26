@@ -460,17 +460,17 @@
     <div class="header-actions">
       <div class="status-pill">
         <span class="dot" id="statusDot"></span>
-        <span id="statusText">Connecting...</span>
+        <span id="statusText">Setting up...</span>
       </div>
-      <a href="/tv" target="_blank" class="btn-link">TV View ↗</a>
+      <a href="/tv" target="_blank" class="btn-link">Watch View ↗</a>
     </div>
   </header>
 
   <main>
     <div class="stage-card">
       <div class="stage-header">
-        <span class="stage-title">Screen Feed</span>
-        <span class="stage-meta" id="tvCountHeader">0 TV(s) Connected</span>
+        <span class="stage-title">Your Screen</span>
+        <span class="stage-meta" id="tvCountHeader">0 Friends Watching</span>
       </div>
 
       <div class="stage-body">
@@ -482,12 +482,12 @@
               <line x1="12" y1="17" x2="12" y2="21"></line>
             </svg>
           </div>
-          <h3>Wireless Screen Broadcast</h3>
-          <p>Instant ultra-low latency screen sharing to any Smart TV browser with crystal-clear native quality.</p>
+          <h3>Share Screen with Friends</h3>
+          <p>Stream your games, videos, or desktop straight to any TV or browser with smooth 60 FPS and zero delay.</p>
           
           <div class="quality-indicator-row">
             <span class="quality-pulse"></span>
-            <span>Maximum Quality Locked (Native 60 FPS • Real-Time WebRTC)</span>
+            <span>⚡ Ultra Smooth 60 FPS • Real-Time Audio & Video</span>
           </div>
 
           <div>
@@ -496,7 +496,7 @@
                 <circle cx="12" cy="12" r="10"></circle>
                 <polygon points="10 8 16 12 10 16 10 8"></polygon>
               </svg>
-              Share Screen
+              Start Sharing
             </button>
           </div>
         </div>
@@ -507,7 +507,7 @@
       <div class="stage-footer">
         <div>
           <button id="startBtn" class="btn-black" onclick="startScreenShare()">
-            Share Screen
+            Start Sharing
           </button>
           <button id="stopBtn" class="btn-stop" style="display: none;" onclick="stopScreenShare()">
             Stop Sharing
@@ -515,22 +515,22 @@
         </div>
 
         <button class="btn-outline" onclick="sendFlashPing()">
-          Test Ping TV
+          Ping Friends 👋
         </button>
       </div>
     </div>
 
     <div class="sidebar">
       <div class="panel">
-        <div class="panel-label">TV Connection</div>
+        <div class="panel-label">Share Link & Code</div>
 
         <div class="code-display-box">
-          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.35rem; letter-spacing: 0.05em;">Meeting Code</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.35rem; letter-spacing: 0.05em;">Room Code</div>
           <div class="code-digits" id="roomCodeDisplay">7777</div>
         </div>
 
         <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;">
-          TV Browser URL:
+          Send this link to friends:
         </div>
 
         <div class="url-box">
@@ -540,17 +540,17 @@
       </div>
 
       <div class="panel">
-        <div class="panel-label">Connected Devices</div>
+        <div class="panel-label">Who's Watching</div>
         <div id="noViewersNotice" style="color: var(--text-dim); font-size: 0.85rem; text-align: center; padding: 0.85rem 0;">
-          No TVs connected yet
+          No friends connected yet
         </div>
         <ul class="viewers-list" id="viewersList" style="display: none;"></ul>
       </div>
 
       <div class="panel qr-container">
-        <div class="panel-label">Scan to View</div>
+        <div class="panel-label">Scan to Watch</div>
         <div id="qrcode"></div>
-        <div style="font-size: 0.78rem; color: var(--text-muted);">Point TV remote or phone camera at QR code</div>
+        <div style="font-size: 0.78rem; color: var(--text-muted);">Scan with any phone or TV camera to watch instantly</div>
       </div>
     </div>
   </main>
@@ -601,7 +601,7 @@
 
     function copyDirectUrl() {
       navigator.clipboard.writeText(tvUrl);
-      alert('Copied URL: ' + tvUrl);
+      alert('Link copied! Send it to your friends 🚀');
     }
 
     // --- High-Quality WebRTC Optimization ---
@@ -718,7 +718,7 @@
           signalingMode = 'lan';
           console.log('[Signaling] Connected via Direct LAN WebSocket ⚡');
           document.getElementById('statusDot').classList.add('live');
-          document.getElementById('statusText').innerText = 'Ready (LAN ⚡)';
+          document.getElementById('statusText').innerText = 'Online (Super Fast ⚡)';
 
           ws.send(JSON.stringify({
             type: 'register-presenter',
@@ -895,7 +895,7 @@
 
       peer.on('open', () => {
         document.getElementById('statusDot').classList.add('live');
-        document.getElementById('statusText').innerText = 'Ready (Cloud ☁️)';
+        document.getElementById('statusText').innerText = 'Online (Cloud ☁️)';
       });
 
       peer.on('connection', (conn) => {
@@ -964,7 +964,8 @@
           if (data.type === 'pong' && data.t) {
             const rtt = Math.round(performance.now() - data.t);
             const count = knownViewers.size;
-            document.getElementById('tvCountHeader').innerText = `${count} TV(s) Connected • ${rtt}ms`;
+            const label = count === 1 ? '1 Friend Watching' : `${count} Friends Watching`;
+            document.getElementById('tvCountHeader').innerText = `${label} • ${rtt}ms`;
           }
         } catch (e) {}
       };
@@ -997,7 +998,8 @@
       const list = document.getElementById('viewersList');
       const notice = document.getElementById('noViewersNotice');
       const count = knownViewers.size;
-      document.getElementById('tvCountHeader').innerText = `${count} TV(s) Connected`;
+      const label = count === 1 ? '1 Friend Watching' : `${count} Friends Watching`;
+      document.getElementById('tvCountHeader').innerText = label;
 
       if (count === 0) {
         list.style.display = 'none';
@@ -1149,7 +1151,7 @@
           sent++;
         }
       });
-      alert(sent > 0 ? `Sent test ping to connected TV(s)!` : 'No TVs connected yet.');
+      alert(sent > 0 ? `Sent a wave to your friends' screens! 👋` : 'No friends are watching yet. Share the link!');
     }
 
     initSignaling();

@@ -400,13 +400,13 @@ function printBanner(ip) {
   const pcUrl = isPort80Bound ? `http://localhost (or http://localhost:${SECONDARY_PORT})` : `http://localhost:${SECONDARY_PORT}`;
 
   console.log('\n================================================================');
-  console.log('   🚀 SACHCAST WIRELESS SCREEN BROADCASTER (MAX QUALITY LOCKED)');
+  console.log('   🚀 SACHCAST - SCREEN SHARE WITH FRIENDS');
   console.log('================================================================\n');
-  console.log('  1. ON YOUR PC (Presenter):');
-  console.log(`     👉 Open Chrome or Edge: ${pcUrl}`);
-  console.log('\n  2. ON YOUR SMART TV (Viewer):');
-  console.log(`     👉 Open TV Browser:     ${tvUrl}`);
-  console.log('\n  ✨ 4K UHD Native Quality • 60 FPS • Real-Time ~10ms WebRTC Active');
+  console.log('  1. ON YOUR COMPUTER:');
+  console.log(`     👉 Open: ${pcUrl}`);
+  console.log('\n  2. FOR YOUR FRIENDS / TV:');
+  console.log(`     👉 Send them this link: ${tvUrl}`);
+  console.log('\n  ✨ Smooth 60 FPS • Stereo Audio • Zero Lag');
   console.log('================================================================\n');
 }
 

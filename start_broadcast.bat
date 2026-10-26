@@ -1,9 +1,9 @@
 @echo off
-title SachCast - Wireless Screen Broadcaster
+title SachCast - Screen Share with Friends
 cd /d "%~dp0"
 echo =================================================================
-echo   Starting SachCast Screen Broadcaster (Dual Port 80 & 3000)...
-echo   Maximum 4K UHD 60FPS Quality Locked - Real-Time ~10ms Latency
+echo   Starting SachCast Screen Share (Dual Port 80 & 3000)...
+echo   Smooth 60 FPS • Stereo Audio • Zero Lag
 echo =================================================================
 echo.
 if not exist "node_modules\ws" (

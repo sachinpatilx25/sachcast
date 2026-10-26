@@ -185,12 +185,12 @@
       </svg>
     </div>
 
-    <h1 id="screenTitle">SachCast Receiver</h1>
-    <p id="screenSubtitle">Connected to receiver. Waiting for PC screen broadcast...</p>
+    <h1 id="screenTitle">Welcome to SachCast</h1>
+    <p id="screenSubtitle">You're connected! Waiting for your friend to start sharing... 🍿</p>
 
     <div class="code-box-wrapper">
       <input type="text" id="manualCode" class="code-input" maxlength="4" value="7777">
-      <button class="connect-btn" onclick="applyManualCode()">Connect</button>
+      <button class="connect-btn" onclick="applyManualCode()">Join</button>
     </div>
 
     <div class="status-badge" id="statusBadge">
@@ -332,9 +332,9 @@
           console.log('[TV Signaling] Connected via Direct LAN WebSocket ⚡');
 
           statusDot.style.background = '#ffffff';
-          statusLabel.innerText = 'Connected to Host (LAN ⚡)';
-          screenTitle.innerText = 'Paired with PC';
-          screenSubtitle.innerText = 'Waiting for PC to start screen broadcast...';
+          statusLabel.innerText = 'Connected (Super Fast ⚡)';
+          screenTitle.innerText = 'All Set!';
+          screenSubtitle.innerText = 'Waiting for your friend to share their screen... 🍿';
 
           ws.send(JSON.stringify({
             type: 'register-viewer',
@@ -377,24 +377,24 @@
           }
           if (msg.presenterId) currentPresenterId = msg.presenterId;
           statusDot.style.background = '#ffffff';
-          statusLabel.innerText = msg.hasPresenter ? 'Paired with PC ⚡' : 'Waiting for PC...';
+          statusLabel.innerText = msg.hasPresenter ? 'Connected to Friend ⚡' : 'Waiting for Friend...';
           return;
         }
 
         if (msg.type === 'presenter-connected') {
           currentPresenterId = msg.presenterId;
-          statusLabel.innerText = 'Presenter Ready';
-          screenSubtitle.innerText = 'Presenter connected. Waiting for screen share...';
+          statusLabel.innerText = 'Friend is Ready!';
+          screenSubtitle.innerText = 'Connected! Your friend is about to share their screen... 🎬';
           return;
         }
 
         if (msg.type === 'presenter-disconnected') {
-          showStandby('Broadcast Stopped', 'Presenter disconnected. Waiting for presenter to reconnect...');
+          showStandby('Stream Paused', 'Your friend disconnected. Waiting for them to rejoin...');
           return;
         }
 
         if (msg.type === 'stream-stopped') {
-          showStandby('Broadcast Stopped', 'Screen sharing stopped by presenter.');
+          showStandby('Sharing Stopped', 'Your friend stopped sharing their screen.');
           return;
         }
 
@@ -570,15 +570,15 @@
       dataConn = peer.connect(hostPeerId);
 
       dataConn.on('open', () => {
-        statusLabel.innerText = 'Paired with PC';
-        screenTitle.innerText = 'Paired with PC';
-        screenSubtitle.innerText = 'Click "Share Screen" on your computer to broadcast.';
+        statusLabel.innerText = 'Connected ☁️';
+        screenTitle.innerText = 'All Set!';
+        screenSubtitle.innerText = 'Waiting for your friend to start sharing... 🍿';
         dataConn.send({ type: 'hello', deviceName: parseDeviceName() });
       });
 
       dataConn.on('data', (data) => {
         if (data && data.type === 'stream-stopped') {
-          showStandby('Broadcast Stopped', 'Waiting for PC to resume sharing...');
+          showStandby('Sharing Stopped', 'Your friend stopped sharing their screen.');
         }
       });
 
@@ -591,7 +591,7 @@
       const code = manualCodeInput.value.trim();
       if (code.length >= 4) {
         roomCode = code;
-        statusLabel.innerText = `Connecting to [ ${code} ]...`;
+        statusLabel.innerText = `Joining room [ ${code} ]...`;
         initTVReceiver();
       }
     }
