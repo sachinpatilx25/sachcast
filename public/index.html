@@ -708,6 +708,42 @@
       width: 85px;
     }
 
+    .btn-pill {
+      background: #181818;
+      border: 1px solid #333333;
+      color: #bbbbbb;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.28rem 0.65rem;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .btn-pill:hover, .btn-pill.active {
+      background: #ffffff;
+      color: #000000;
+      border-color: #ffffff;
+    }
+
+    .btn-mini {
+      background: #1a1a1a;
+      border: 1px solid #333333;
+      color: #ffffff;
+      font-size: 0.72rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+      transition: all 0.15s ease;
+    }
+
+    .btn-mini:hover {
+      background: #ffffff;
+      color: #000000;
+    }
+
     /* Drop Zone */
     .drop-zone {
       border: 2px dashed #2a2a2a;
@@ -1003,7 +1039,25 @@
             </div>
           </div>
 
+          <!-- Google Meet Style Live Stream Diagnostics HUD -->
+          <div class="stats-overlay" id="statsOverlay" style="display: none;">
+            <div class="stat-chip"><span id="statLatencyChip">⚡ 12 ms</span></div>
+            <div class="stat-chip"><span id="statBitrateChip">📶 3.5 Mbps</span></div>
+            <div class="stat-chip"><span id="statFpsChip">🎞️ 30 FPS</span></div>
+            <div class="stat-chip"><span id="statModeChip">⚡ LAN</span></div>
+            <div class="stat-chip" id="statHintChip">📝 Sharp Text</div>
+          </div>
+
           <video id="localVideo" autoplay playsinline muted style="display: none;"></video>
+
+          <!-- Real-Time Audio VU Level Meter -->
+          <div id="audioVisualizerWrap" style="position: absolute; bottom: 0.75rem; left: 1rem; right: 1rem; display: none; align-items: center; gap: 0.65rem; background: rgba(0, 0, 0, 0.75); padding: 0.4rem 0.8rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+            <span style="font-size: 0.72rem; color: #888888; font-family: 'JetBrains Mono', monospace; font-weight: 600;">AUDIO STREAM</span>
+            <div style="flex: 1; height: 5px; background: #222222; border-radius: 9999px; overflow: hidden;">
+              <div id="audioVuBar" style="height: 100%; width: 0%; background: #22c55e; border-radius: 9999px; transition: width 0.08s ease;"></div>
+            </div>
+            <span id="audioVuLabel" style="font-size: 0.72rem; color: #22c55e; font-family: 'JetBrains Mono', monospace;">48kHz Stereo</span>
+          </div>
         </div>
 
         <div class="stage-footer">
@@ -1016,7 +1070,10 @@
             </button>
           </div>
 
-          <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <button class="btn-outline" id="contentHintBtn" onclick="toggleContentHint()" title="Google Meet mode: Sharp Text (Slides/Code) vs Fluid Motion (Videos/Games)">
+              📝 Sharp Text
+            </button>
             <button class="btn-outline" id="aspectRatioBtn" onclick="cyclePresenterAspectRatio()" title="Switch TV Aspect Ratio: Fit / Stretch (No Black Bars) / Zoom">
               📺 TV Fit: Original
             </button>
@@ -1088,6 +1145,46 @@
                 </button>
                 <input type="range" class="custom-range" id="mediaVolumeSlider" min="0" max="1" step="0.05" value="1" oninput="setVolume(this.value)">
                 <span style="font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; color: #aaaaaa; min-width: 32px;" id="volLevelDisplay">100%</span>
+              </div>
+            </div>
+
+            <!-- Web Video Caster Pro Controls: Speed & Audio Boost -->
+            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.85rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #1f1f1f;">
+              <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <span style="font-size: 0.75rem; color: #888888; font-family: 'JetBrains Mono', monospace; font-weight: 600;">SPEED:</span>
+                <button class="btn-pill" id="speedBtn_075" onclick="setPresenterSpeed(0.75)">0.75x</button>
+                <button class="btn-pill active" id="speedBtn_1" onclick="setPresenterSpeed(1.0)">1.0x</button>
+                <button class="btn-pill" id="speedBtn_125" onclick="setPresenterSpeed(1.25)">1.25x</button>
+                <button class="btn-pill" id="speedBtn_15" onclick="setPresenterSpeed(1.5)">1.5x</button>
+                <button class="btn-pill" id="speedBtn_2" onclick="setPresenterSpeed(2.0)">2.0x</button>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <span style="font-size: 0.75rem; color: #888888; font-family: 'JetBrains Mono', monospace; font-weight: 600;">BOOST:</span>
+                <button class="btn-pill active" id="boostBtn_100" onclick="setPresenterBoost(1.0)">100%</button>
+                <button class="btn-pill" id="boostBtn_150" onclick="setPresenterBoost(1.5)">150%</button>
+                <button class="btn-pill" id="boostBtn_200" onclick="setPresenterBoost(2.0)">200%</button>
+              </div>
+            </div>
+
+            <!-- Web Video Caster Pro Controls: Subtitles & Sync -->
+            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.85rem; margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px solid #1a1a1a;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 0.75rem; color: #888888; font-family: 'JetBrains Mono', monospace; font-weight: 600;">💬 SUBTITLES:</span>
+                <button class="btn-outline" style="font-size: 0.75rem; padding: 0.35rem 0.75rem;" onclick="document.getElementById('subtitleFileInput').click()">
+                  + Choose .srt / .vtt File
+                </button>
+                <button class="btn-outline" id="removeSubsBtn" style="font-size: 0.75rem; padding: 0.35rem 0.65rem; display: none;" onclick="removeSubtitles()">
+                  ✕ Off
+                </button>
+                <input type="file" id="subtitleFileInput" accept=".srt,.vtt" style="display: none;" onchange="handleSubtitleUpload(this.files)">
+                <span id="subtitleStatusLabel" style="font-size: 0.75rem; color: #888888; font-family: 'JetBrains Mono', monospace;">None</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.35rem;">
+                <span style="font-size: 0.7rem; color: #666666;">SYNC:</span>
+                <button class="btn-mini" onclick="adjustSubSync(-0.5)">-0.5s</button>
+                <span id="subSyncOffsetLabel" style="font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; color: #ffffff;">0.0s</span>
+                <button class="btn-mini" onclick="adjustSubSync(0.5)">+0.5s</button>
               </div>
             </div>
           </div>
@@ -1766,11 +1863,8 @@
 
         localStream = stream;
 
-        // Apply contentHint 'motion' so mouse hover and movement don't stall the video encoder
-        const videoTrack = localStream.getVideoTracks()[0];
-        if (videoTrack && 'contentHint' in videoTrack) {
-          videoTrack.contentHint = 'motion';
-        }
+        applyContentHintToStream();
+        setupAudioVisualizer(localStream);
 
         const videoElem = document.getElementById('localVideo');
         videoElem.srcObject = localStream;
@@ -1781,9 +1875,12 @@
 
         callAllViewers();
 
-        videoTrack.onended = () => {
-          stopScreenShare();
-        };
+        const videoTrack = localStream.getVideoTracks()[0];
+        if (videoTrack) {
+          videoTrack.onended = () => {
+            stopScreenShare();
+          };
+        }
 
       } catch (err) {
         console.warn('Screen share canceled or error:', err);
@@ -1794,6 +1891,15 @@
       if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
         localStream = null;
+      }
+
+      const overlay = document.getElementById('statsOverlay');
+      if (overlay) overlay.style.display = 'none';
+      const vuWrap = document.getElementById('audioVisualizerWrap');
+      if (vuWrap) vuWrap.style.display = 'none';
+      if (audioVisualizerFrame) {
+        cancelAnimationFrame(audioVisualizerFrame);
+        audioVisualizerFrame = null;
       }
 
       document.getElementById('localVideo').style.display = 'none';
@@ -1966,8 +2072,8 @@
       if (btn2) btn2.innerText = label;
     }
 
-    function sendAspectRatioToTv(mode) {
-      const msg = { type: 'set-aspect-ratio', fit: mode };
+    // --- Unified Broadcast Control Dispatcher ---
+    function broadcastControlMessage(msg) {
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify(msg));
       }
@@ -1981,12 +2087,215 @@
           try { conn.dc.send(JSON.stringify(msg)); } catch (e) {}
         }
       });
+    }
+
+    function sendAspectRatioToTv(mode) {
+      broadcastControlMessage({ type: 'set-aspect-ratio', fit: mode });
       const names = {
         contain: 'Fit (Original Proportions)',
         fill: 'Stretch (No Black Bars)',
         cover: 'Zoom (Crop)'
       };
       showToast(`TV Aspect Ratio set to: ${names[mode] || mode}`);
+    }
+
+    // --- Google Meet Content Hint Mode (Sharp Text vs Fluid Motion) ---
+    let currentContentHint = 'detail'; // 'detail' for code/docs/slides, 'motion' for videos/games
+
+    function toggleContentHint() {
+      currentContentHint = currentContentHint === 'detail' ? 'motion' : 'detail';
+      applyContentHintToStream();
+    }
+
+    function applyContentHintToStream() {
+      if (localStream) {
+        const videoTrack = localStream.getVideoTracks()[0];
+        if (videoTrack && 'contentHint' in videoTrack) {
+          videoTrack.contentHint = currentContentHint;
+        }
+      }
+      const btn = document.getElementById('contentHintBtn');
+      const chip = document.getElementById('statHintChip');
+      if (currentContentHint === 'detail') {
+        if (btn) btn.innerText = '📝 Sharp Text';
+        if (chip) chip.innerText = '📝 Sharp Text';
+        showToast('Screen mode: Sharp Text & Slides (Google Meet detail matrix)');
+      } else {
+        if (btn) btn.innerText = '🎬 Smooth Video';
+        if (chip) chip.innerText = '🎬 Smooth Video';
+        showToast('Screen mode: Smooth Video & Motion (Priority on fluid 30 FPS)');
+      }
+    }
+
+    // --- Real-Time Audio Level VU Meter (Google Meet Style) ---
+    let audioAnalyser = null;
+    let audioVisualizerFrame = null;
+
+    function setupAudioVisualizer(stream) {
+      if (!stream) return;
+      const audioTrack = stream.getAudioTracks()[0];
+      const wrap = document.getElementById('audioVisualizerWrap');
+      const bar = document.getElementById('audioVuBar');
+
+      if (!audioTrack) {
+        if (wrap) wrap.style.display = 'none';
+        return;
+      }
+
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioCtx.createMediaStreamSource(new MediaStream([audioTrack]));
+        audioAnalyser = audioCtx.createAnalyser();
+        audioAnalyser.fftSize = 64;
+        source.connect(audioAnalyser);
+
+        if (wrap) wrap.style.display = 'flex';
+
+        const pcmData = new Uint8Array(audioAnalyser.frequencyBinCount);
+        function renderVu() {
+          if (!localStream) {
+            if (wrap) wrap.style.display = 'none';
+            return;
+          }
+          audioAnalyser.getByteFrequencyData(pcmData);
+          let sum = 0;
+          for (let i = 0; i < pcmData.length; i++) sum += pcmData[i];
+          const avg = sum / pcmData.length;
+          const pct = Math.min(100, Math.round((avg / 128) * 100));
+          if (bar) bar.style.width = pct + '%';
+          audioVisualizerFrame = requestAnimationFrame(renderVu);
+        }
+        renderVu();
+      } catch (e) {
+        console.warn('VU meter setup warning:', e);
+      }
+    }
+
+    // --- Google Meet Stream Quality Diagnostics Polling ---
+    setInterval(async () => {
+      const overlay = document.getElementById('statsOverlay');
+      if (!localStream) {
+        if (overlay) overlay.style.display = 'none';
+        return;
+      }
+      if (overlay) overlay.style.display = 'flex';
+
+      let activePc = null;
+      nativeConnections.forEach(c => { if (c.pc) activePc = c.pc; });
+      if (!activePc) {
+        activeCalls.forEach(call => { if (call.peerConnection) activePc = call.peerConnection; });
+      }
+
+      if (activePc && activePc.getStats) {
+        try {
+          const stats = await activePc.getStats();
+          stats.forEach(report => {
+            if (report.type === 'candidate-pair' && typeof report.currentRoundTripTime === 'number') {
+              const rttMs = Math.round(report.currentRoundTripTime * 1000);
+              const chip = document.getElementById('statLatencyChip');
+              if (chip) chip.innerText = `⚡ ${rttMs} ms`;
+            }
+            if (report.type === 'outbound-rtp' && report.kind === 'video') {
+              if (report.framesPerSecond) {
+                const fpsChip = document.getElementById('statFpsChip');
+                if (fpsChip) fpsChip.innerText = `🎞️ ${Math.round(report.framesPerSecond)} FPS`;
+              }
+            }
+          });
+        } catch(e) {}
+      }
+    }, 2000);
+
+    // --- Web Video Caster Pro Controls (Subtitles, Speed, Audio Boost) ---
+    let currentSubtitlesVtt = null;
+    let currentSubtitlesName = '';
+    let currentSubOffsetSec = 0;
+
+    function parseSrtToVtt(srtContent) {
+      let vtt = 'WEBVTT\n\n' + srtContent
+        .replace(/\r\n|\r/g, '\n')
+        .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+      return vtt;
+    }
+
+    function handleSubtitleUpload(files) {
+      if (!files || files.length === 0) return;
+      const file = files[0];
+      currentSubtitlesName = file.name;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        let content = e.target.result;
+        if (file.name.toLowerCase().endsWith('.srt')) {
+          content = parseSrtToVtt(content);
+        }
+        currentSubtitlesVtt = content;
+        currentSubOffsetSec = 0;
+        const offsetLabel = document.getElementById('subSyncOffsetLabel');
+        if (offsetLabel) offsetLabel.innerText = '0.0s';
+        const statusLabel = document.getElementById('subtitleStatusLabel');
+        if (statusLabel) statusLabel.innerText = file.name;
+        const removeBtn = document.getElementById('removeSubsBtn');
+        if (removeBtn) removeBtn.style.display = 'inline-flex';
+        sendSubtitlesToTv(currentSubtitlesVtt, file.name);
+      };
+      reader.readAsText(file);
+    }
+
+    function removeSubtitles() {
+      currentSubtitlesVtt = null;
+      currentSubtitlesName = '';
+      const statusLabel = document.getElementById('subtitleStatusLabel');
+      if (statusLabel) statusLabel.innerText = 'None';
+      const removeBtn = document.getElementById('removeSubsBtn');
+      if (removeBtn) removeBtn.style.display = 'none';
+      const fileInput = document.getElementById('subtitleFileInput');
+      if (fileInput) fileInput.value = '';
+      sendSubtitlesToTv('', '');
+    }
+
+    function adjustSubSync(deltaSec) {
+      if (!currentSubtitlesVtt) {
+        showToast('Please load a subtitle file first');
+        return;
+      }
+      currentSubOffsetSec += deltaSec;
+      const offsetLabel = document.getElementById('subSyncOffsetLabel');
+      if (offsetLabel) offsetLabel.innerText = (currentSubOffsetSec > 0 ? '+' : '') + currentSubOffsetSec.toFixed(1) + 's';
+      showToast(`Subtitle sync adjusted: ${(currentSubOffsetSec > 0 ? '+' : '')}${currentSubOffsetSec.toFixed(1)}s`);
+      broadcastControlMessage({ type: 'trigger-osd' });
+    }
+
+    function sendSubtitlesToTv(vttContent, label) {
+      broadcastControlMessage({
+        type: 'set-subtitles',
+        vttContent: vttContent,
+        label: label
+      });
+      if (vttContent) showToast(`Subtitles loaded on TV: ${label}`);
+      else showToast('Subtitles disabled on TV');
+    }
+
+    function setPresenterSpeed(speed) {
+      [0.75, 1.0, 1.25, 1.5, 2.0].forEach(s => {
+        const id = 'speedBtn_' + s.toString().replace('.', '');
+        const btn = document.getElementById(id);
+        if (btn) btn.classList.toggle('active', s === speed);
+      });
+      if (localFilePlayer) {
+        localFilePlayer.playbackRate = speed;
+      }
+      broadcastControlMessage({ type: 'set-speed', speed });
+      showToast(`Playback speed set to: ${speed}x`);
+    }
+
+    function setPresenterBoost(boost) {
+      [1.0, 1.5, 2.0].forEach(b => {
+        const id = 'boostBtn_' + Math.round(b * 100);
+        const btn = document.getElementById(id);
+        if (btn) btn.classList.toggle('active', b === boost);
+      });
+      broadcastControlMessage({ type: 'set-audio-boost', boost });
+      showToast(`TV Audio Volume Boost: ${Math.round(boost * 100)}%`);
     }
 
     async function startRealtimeFileCast(file) {

@@ -46,7 +46,9 @@ const MIME_TYPES = {
   '.wav': 'audio/wav',
   '.aac': 'audio/aac',
   '.flac': 'audio/flac',
-  '.ogg': 'audio/ogg'
+  '.ogg': 'audio/ogg',
+  '.vtt': 'text/vtt; charset=utf-8',
+  '.srt': 'text/plain; charset=utf-8'
 };
 
 function formatBytes(bytes) {

@@ -117,6 +117,138 @@
       transform: translateX(-50%) translateY(0);
     }
 
+    /* Netflix-Grade WebVTT Subtitle Styling */
+    ::cue {
+      background-color: rgba(0, 0, 0, 0.78) !important;
+      color: #ffffff !important;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+      font-size: 1.4rem !important;
+      font-weight: 600 !important;
+      line-height: 1.4 !important;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9) !important;
+      border-radius: 6px !important;
+      padding: 4px 12px !important;
+    }
+
+    /* Web Video Caster / Netflix Grade Smart TV Heads-Up Display */
+    .tv-osd {
+      position: fixed;
+      bottom: 2rem;
+      left: 3rem;
+      right: 3rem;
+      background: rgba(14, 14, 14, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 18px;
+      padding: 1.25rem 2rem;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85);
+    }
+
+    .tv-osd.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .osd-top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .osd-title-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .osd-live-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 10px rgba(34, 197, 94, 0.8);
+    }
+
+    .osd-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+      max-width: 50vw;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .osd-badge-group {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .osd-badge {
+      background: #1e1e1e;
+      border: 1px solid #333333;
+      color: #dddddd;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.25rem 0.65rem;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .osd-progress-wrap {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .osd-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #aaaaaa;
+      min-width: 50px;
+    }
+
+    .osd-bar-bg {
+      position: relative;
+      flex: 1;
+      height: 6px;
+      background: #262626;
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+
+    .osd-bar-buffered {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background: #444444;
+      border-radius: 9999px;
+      width: 0%;
+      transition: width 0.2s ease;
+    }
+
+    .osd-bar-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background: #ffffff;
+      border-radius: 9999px;
+      width: 0%;
+      transition: width 0.15s ease;
+    }
+
     #standbyScreen {
       position: fixed;
       top: 0;
@@ -267,6 +399,30 @@
 
   <div id="tvToast" class="tv-toast">👋 Your friend sent a wave!</div>
 
+  <!-- Smart TV On-Screen Display (OSD HUD) -->
+  <div id="tvOsd" class="tv-osd">
+    <div class="osd-top-row">
+      <div class="osd-title-group">
+        <span class="osd-live-dot" id="osdPlayStatusDot"></span>
+        <span class="osd-title" id="osdTitle">SachCast Stream</span>
+      </div>
+      <div class="osd-badge-group">
+        <span class="osd-badge" id="osdAspectBadge">📺 16:9 Fit</span>
+        <span class="osd-badge" id="osdSpeedBadge">1.0x</span>
+        <span class="osd-badge" id="osdSubBadge" style="display: none;">💬 SUB</span>
+        <span class="osd-badge" id="osdClockBadge">--:--</span>
+      </div>
+    </div>
+    <div class="osd-progress-wrap">
+      <span class="osd-time" id="osdCurrentTime">00:00</span>
+      <div class="osd-bar-bg">
+        <div class="osd-bar-buffered" id="osdBufferBar"></div>
+        <div class="osd-bar-fill" id="osdProgressBar"></div>
+      </div>
+      <span class="osd-time" id="osdTotalTime">00:00</span>
+    </div>
+  </div>
+
   <div id="displayContainer">
     <video id="tvVideo" autoplay playsinline webkit-playsinline></video>
   </div>
@@ -296,6 +452,160 @@
     let playbackMode = 'webrtc'; // 'webrtc' or 'media'
     let currentMediaTitle = '';
 
+    function formatTime(sec) {
+      if (!sec || isNaN(sec) || sec < 0) return '00:00';
+      const s = Math.floor(sec);
+      const m = Math.floor(s / 60);
+      const h = Math.floor(m / 60);
+      const rM = m % 60;
+      const rS = s % 60;
+      const pad = (n) => n.toString().padStart(2, '0');
+      if (h > 0) return `${h}:${pad(rM)}:${pad(rS)}`;
+      return `${pad(rM)}:${pad(rS)}`;
+    }
+
+    // --- Smart TV Heads-Up Display (OSD HUD) ---
+    let osdHideTimer = null;
+    function triggerOsd() {
+      const osd = document.getElementById('tvOsd');
+      if (!osd) return;
+
+      updateOsdDisplay();
+      osd.classList.add('show');
+
+      if (osdHideTimer) clearTimeout(osdHideTimer);
+      osdHideTimer = setTimeout(() => {
+        osd.classList.remove('show');
+      }, 3500);
+    }
+
+    function updateOsdDisplay() {
+      const title = document.getElementById('osdTitle');
+      if (title) title.innerText = currentMediaTitle || (playbackMode === 'webrtc' ? 'Screen Share Stream' : 'Video');
+
+      const cur = document.getElementById('osdCurrentTime');
+      const dur = document.getElementById('osdTotalTime');
+      const fill = document.getElementById('osdProgressBar');
+      const buf = document.getElementById('osdBufferBar');
+      const clock = document.getElementById('osdClockBadge');
+      const aspect = document.getElementById('osdAspectBadge');
+      const speed = document.getElementById('osdSpeedBadge');
+      const dot = document.getElementById('osdPlayStatusDot');
+
+      if (dot) {
+        dot.style.background = tvVideo.paused ? '#eab308' : '#22c55e';
+      }
+      if (aspect) {
+        aspect.innerText = currentAspectRatio === 'fill' ? '↔️ Stretch' : currentAspectRatio === 'cover' ? '🔍 Zoom' : '📺 16:9 Fit';
+      }
+      if (speed) {
+        speed.innerText = (tvVideo.playbackRate || 1.0) + 'x';
+      }
+      if (clock) {
+        const d = new Date();
+        clock.innerText = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+
+      if (tvVideo.duration && !isNaN(tvVideo.duration)) {
+        if (cur) cur.innerText = formatTime(tvVideo.currentTime);
+        if (dur) dur.innerText = formatTime(tvVideo.duration);
+        const pct = (tvVideo.currentTime / tvVideo.duration) * 100;
+        if (fill) fill.style.width = pct + '%';
+
+        if (tvVideo.buffered && tvVideo.buffered.length > 0) {
+          try {
+            const bufEnd = tvVideo.buffered.end(tvVideo.buffered.length - 1);
+            const bufPct = (bufEnd / tvVideo.duration) * 100;
+            if (buf) buf.style.width = Math.min(100, bufPct) + '%';
+          } catch(e) {}
+        }
+      } else {
+        if (cur) cur.innerText = 'LIVE';
+        if (dur) dur.innerText = '1080p';
+        if (fill) fill.style.width = '100%';
+      }
+    }
+
+    // --- Subtitles Engine (WebVTT & SRT Native Track Support) ---
+    let currentSubtitlesVtt = null;
+    function applySubtitles(vttText, label = 'Subtitles') {
+      currentSubtitlesVtt = vttText;
+      const oldTracks = tvVideo.querySelectorAll('track');
+      oldTracks.forEach(t => t.remove());
+
+      const subBadge = document.getElementById('osdSubBadge');
+
+      if (!vttText || vttText.trim() === '') {
+        if (subBadge) subBadge.style.display = 'none';
+        showTvToast('💬 Subtitles Turned Off');
+        triggerOsd();
+        return;
+      }
+
+      try {
+        const blob = new Blob([vttText], { type: 'text/vtt' });
+        const url = URL.createObjectURL(blob);
+        const track = document.createElement('track');
+        track.kind = 'subtitles';
+        track.label = label;
+        track.srclang = 'en';
+        track.src = url;
+        track.default = true;
+        tvVideo.appendChild(track);
+        track.mode = 'showing';
+        if (tvVideo.textTracks && tvVideo.textTracks[0]) {
+          tvVideo.textTracks[0].mode = 'showing';
+        }
+        if (subBadge) subBadge.style.display = 'inline-block';
+        showTvToast('💬 Subtitles Active: ' + label);
+        triggerOsd();
+      } catch (e) {
+        console.warn('Subtitles mount error:', e);
+      }
+    }
+
+    // --- Playback Speed Control ---
+    function applyPlaybackSpeed(speed, showNotice = true) {
+      speed = parseFloat(speed) || 1.0;
+      tvVideo.playbackRate = speed;
+      const speedBadge = document.getElementById('osdSpeedBadge');
+      if (speedBadge) speedBadge.innerText = speed + 'x';
+      if (showNotice) showTvToast('⚡ Speed: ' + speed + 'x');
+      triggerOsd();
+    }
+
+    // --- Safe Audio Volume Booster (100% - 200%) ---
+    let boostAudioCtx = null;
+    let boostGainNode = null;
+    let boostSource = null;
+
+    function applyAudioBoost(boostFactor) {
+      const factor = parseFloat(boostFactor) || 1.0;
+      if (factor <= 1.0) {
+        tvVideo.volume = 1.0;
+        if (boostGainNode) boostGainNode.gain.value = 1.0;
+        showTvToast('🔊 Volume: 100%');
+      } else {
+        try {
+          if (!boostAudioCtx) {
+            boostAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            boostGainNode = boostAudioCtx.createGain();
+            boostSource = boostAudioCtx.createMediaElementSource(tvVideo);
+            boostSource.connect(boostGainNode);
+            boostGainNode.connect(boostAudioCtx.destination);
+          }
+          if (boostAudioCtx.state === 'suspended') {
+            boostAudioCtx.resume();
+          }
+          boostGainNode.gain.value = factor;
+          showTvToast(`🔊 Audio Boost: ${Math.round(factor * 100)}%`);
+        } catch (e) {
+          console.warn('Audio boost error:', e);
+        }
+      }
+      triggerOsd();
+    }
+
     // --- Aspect Ratio Management (Fit, Stretch/Fill, Zoom) ---
     let currentAspectRatio = localStorage.getItem('sachcast_tv_aspect') || 'contain';
 
@@ -314,6 +624,7 @@
         };
         showTvToast(notices[mode] || `Aspect: ${mode}`);
       }
+      triggerOsd();
     }
 
     function cycleAspectRatio() {
@@ -586,6 +897,26 @@
           return;
         }
 
+        if (msg.type === 'set-subtitles') {
+          applySubtitles(msg.vttContent, msg.label || 'Subtitles');
+          return;
+        }
+
+        if (msg.type === 'set-speed') {
+          applyPlaybackSpeed(msg.speed, true);
+          return;
+        }
+
+        if (msg.type === 'set-audio-boost') {
+          applyAudioBoost(msg.boost);
+          return;
+        }
+
+        if (msg.type === 'trigger-osd') {
+          triggerOsd();
+          return;
+        }
+
         // WebRTC Offer from Presenter
         if (msg.type === 'signal-offer' && msg.offer) {
           playbackMode = 'webrtc';
@@ -705,6 +1036,14 @@
             }
           } else if (data.type === 'set-aspect-ratio' && data.fit) {
             applyAspectRatio(data.fit, true);
+          } else if (data.type === 'set-subtitles') {
+            applySubtitles(data.vttContent, data.label || 'Subtitles');
+          } else if (data.type === 'set-speed') {
+            applyPlaybackSpeed(data.speed, true);
+          } else if (data.type === 'set-audio-boost') {
+            applyAudioBoost(data.boost);
+          } else if (data.type === 'trigger-osd') {
+            triggerOsd();
           }
         } catch (e) {}
       };
@@ -813,6 +1152,14 @@
           if (data.action === 'volume' && typeof data.level === 'number') tvVideo.volume = Math.max(0, Math.min(1, data.level));
         } else if (data.type === 'set-aspect-ratio' && data.fit) {
           applyAspectRatio(data.fit, true);
+        } else if (data.type === 'set-subtitles') {
+          applySubtitles(data.vttContent, data.label || 'Subtitles');
+        } else if (data.type === 'set-speed') {
+          applyPlaybackSpeed(data.speed, true);
+        } else if (data.type === 'set-audio-boost') {
+          applyAudioBoost(data.boost);
+        } else if (data.type === 'trigger-osd') {
+          triggerOsd();
         } else if (data.type === 'switch-to-screen') {
           playbackMode = 'webrtc';
           tvVideo.pause();
@@ -877,8 +1224,10 @@
       unlockAudio();
     }
 
-    window.addEventListener('click', handleUserGesture, { passive: true });
-    window.addEventListener('touchstart', handleUserGesture, { passive: true });
+    // Click, touch, mouse move on TV triggers the sleek OSD
+    window.addEventListener('click', () => { handleUserGesture(); triggerOsd(); }, { passive: true });
+    window.addEventListener('touchstart', () => { handleUserGesture(); triggerOsd(); }, { passive: true });
+    window.addEventListener('mousemove', () => { triggerOsd(); }, { passive: true });
     window.addEventListener('dblclick', () => {
       if (document.body.classList.contains('playing')) {
         cycleAspectRatio();
@@ -912,18 +1261,32 @@
       }
     }
 
-    tvVideo.addEventListener('timeupdate', () => sendMediaStatus(false));
+    tvVideo.addEventListener('timeupdate', () => {
+      sendMediaStatus(false);
+      const osd = document.getElementById('tvOsd');
+      if (osd && osd.classList.contains('show')) {
+        updateOsdDisplay();
+      }
+    });
     tvVideo.addEventListener('play', () => {
       hideStandby();
       sendMediaStatus(true);
+      triggerOsd();
     });
     tvVideo.addEventListener('playing', () => hideStandby());
     tvVideo.addEventListener('loadedmetadata', () => {
       hideStandby();
       applyAspectRatio(currentAspectRatio, false);
+      triggerOsd();
     });
-    tvVideo.addEventListener('pause', () => sendMediaStatus(true));
-    tvVideo.addEventListener('seeked', () => sendMediaStatus(true));
+    tvVideo.addEventListener('pause', () => {
+      sendMediaStatus(true);
+      triggerOsd();
+    });
+    tvVideo.addEventListener('seeked', () => {
+      sendMediaStatus(true);
+      triggerOsd();
+    });
 
     tvVideo.addEventListener('ended', () => {
       if (playbackMode === 'media') {
@@ -933,26 +1296,90 @@
 
     window.addEventListener('keydown', (e) => {
       handleUserGesture();
+      triggerOsd();
 
       // Aspect ratio toggle keys on TV remote:
-      // 'A' key, 'F' key, or Up/Down arrows when video is playing, or Color buttons (Red 403, Green 404, Yellow 405, Blue 406)
+      // 'A' key, 'F' key, or Color buttons (Red 403, Green 404, Yellow 405, Blue 406)
       const isAspectKey = e.key === 'a' || e.key === 'A' || e.key === 'f' || e.key === 'F' ||
                           e.keyCode === 65 || e.keyCode === 70 || e.keyCode === 405 || e.keyCode === 406;
 
-      if (isAspectKey || ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && document.body.classList.contains('playing'))) {
+      if (isAspectKey) {
         cycleAspectRatio();
         return;
       }
 
+      // S key: Cycle playback speed
+      if (e.key === 's' || e.key === 'S') {
+        const cur = tvVideo.playbackRate || 1.0;
+        let nxt = 1.0;
+        if (cur === 1.0) nxt = 1.25;
+        else if (cur === 1.25) nxt = 1.5;
+        else if (cur === 1.5) nxt = 2.0;
+        else if (cur === 2.0) nxt = 0.75;
+        else nxt = 1.0;
+        applyPlaybackSpeed(nxt, true);
+        return;
+      }
+
+      // C key: Toggle Subtitles
+      if (e.key === 'c' || e.key === 'C') {
+        if (tvVideo.textTracks && tvVideo.textTracks.length > 0) {
+          const curMode = tvVideo.textTracks[0].mode;
+          tvVideo.textTracks[0].mode = curMode === 'showing' ? 'hidden' : 'showing';
+          const subBadge = document.getElementById('osdSubBadge');
+          if (subBadge) subBadge.style.display = tvVideo.textTracks[0].mode === 'showing' ? 'inline-block' : 'none';
+          showTvToast(tvVideo.textTracks[0].mode === 'showing' ? '💬 Subtitles ON' : '💬 Subtitles OFF');
+          triggerOsd();
+        }
+        return;
+      }
+
+      // M key: Mute/Unmute
+      if (e.key === 'm' || e.key === 'M') {
+        tvVideo.muted = !tvVideo.muted;
+        showTvToast(tvVideo.muted ? '🔇 Muted' : '🔊 Sound 100%');
+        triggerOsd();
+        return;
+      }
+
+      // Arrow Up / Down: Volume in Media mode, Aspect ratio in Screen Share
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        if (document.body.classList.contains('playing')) {
+          if (playbackMode === 'media') {
+            const delta = e.key === 'ArrowUp' ? 0.1 : -0.1;
+            tvVideo.volume = Math.max(0, Math.min(1, tvVideo.volume + delta));
+            showTvToast(`🔊 Volume: ${Math.round(tvVideo.volume * 100)}%`);
+            triggerOsd();
+          } else {
+            cycleAspectRatio();
+          }
+          return;
+        }
+      }
+
       if (e.key === ' ' || e.keyCode === 32) {
         if (playbackMode === 'media') {
-          if (tvVideo.paused) tvVideo.play().catch(() => {});
-          else tvVideo.pause();
+          if (tvVideo.paused) {
+            tvVideo.play().catch(() => {});
+            showTvToast('▶️ Play');
+          } else {
+            tvVideo.pause();
+            showTvToast('⏸️ Pause');
+          }
+          triggerOsd();
         }
       } else if (e.key === 'ArrowRight' || e.keyCode === 39) {
-        if (playbackMode === 'media') tvVideo.currentTime += 10;
+        if (playbackMode === 'media') {
+          tvVideo.currentTime += 10;
+          showTvToast('⏩ +10s');
+          triggerOsd();
+        }
       } else if (e.key === 'ArrowLeft' || e.keyCode === 37) {
-        if (playbackMode === 'media') tvVideo.currentTime -= 10;
+        if (playbackMode === 'media') {
+          tvVideo.currentTime = Math.max(0, tvVideo.currentTime - 10);
+          showTvToast('⏪ -10s');
+          triggerOsd();
+        }
       } else if (e.key === 'Enter' || e.keyCode === 13) {
         if (!standbyScreen.classList.contains('hidden') && document.activeElement === manualCodeInput) {
           applyManualCode();
