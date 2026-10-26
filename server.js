@@ -69,6 +69,17 @@ function handleMediaStream(req, res, filePath, ext) {
     const range = req.headers.range;
     const contentType = MIME_TYPES[ext] || 'video/mp4';
 
+    // Support HTTP HEAD for Smart TV metadata pre-probing
+    if (req.method === 'HEAD') {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Accept-Ranges': 'bytes',
+        'Content-Type': contentType,
+        'Access-Control-Allow-Origin': '*'
+      });
+      return res.end();
+    }
+
     if (range) {
       const parts = range.replace(/bytes=/, '').split('-');
       const start = parseInt(parts[0], 10);
@@ -306,8 +317,10 @@ function handleHttpRequest(req, res) {
         res.end('500 Server Error');
       }
     } else {
+      const cacheControl = ext === '.html' ? 'no-cache, must-revalidate' : 'public, max-age=3600';
       res.writeHead(200, {
         'Content-Type': MIME_TYPES[ext] || 'application/octet-stream',
+        'Cache-Control': cacheControl,
         'Access-Control-Allow-Origin': '*'
       });
       res.end(content);

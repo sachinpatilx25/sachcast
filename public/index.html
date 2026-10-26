@@ -901,9 +901,38 @@
       border-color: #ff5555;
       background: rgba(255, 85, 85, 0.1);
     }
+
+    .toast-notification {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: #141414;
+      color: #ffffff;
+      border: 1px solid #333333;
+      padding: 0.85rem 1.4rem;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85);
+      z-index: 10000;
+      transform: translateY(20px);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .toast-notification.show {
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
   </style>
 </head>
 <body>
+  <div id="toastNotification" class="toast-notification"></div>
   <header>
     <div class="brand">
       <div class="brand-icon">
@@ -1179,9 +1208,27 @@
       })
       .catch(() => {});
 
+    let toastTimeout = null;
+    function showToast(msg, duration = 3000) {
+      const toast = document.getElementById('toastNotification');
+      if (!toast) return;
+      toast.innerText = msg;
+      toast.classList.add('show');
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, duration);
+    }
+
     function copyDirectUrl() {
       navigator.clipboard.writeText(tvUrl);
-      alert('Link copied! Send it to your friends 🚀');
+      const copyBtn = document.querySelector('.copy-pill');
+      if (copyBtn) {
+        const originalText = copyBtn.innerText;
+        copyBtn.innerText = 'Copied! ✓';
+        setTimeout(() => { copyBtn.innerText = originalText; }, 2000);
+      }
+      showToast('Link copied! Send it to your friends 🍿');
     }
 
     // --- High-Quality WebRTC Optimization ---
@@ -1345,14 +1392,28 @@
           console.log(`[LAN] Viewer joined:`, msg.id, msg.deviceName);
           knownViewers.set(msg.id, { id: msg.id, deviceName: msg.deviceName || 'Smart TV', ip: msg.ip });
           renderViewers();
+          showToast(`${msg.deviceName || 'Friend'} joined! 🎉`);
 
           if (localStream) {
             callViewerNative(msg.id);
+          } else if (currentlyPlayingFile && currentMode === 'media') {
+            const msgObj = {
+              type: 'cast-media',
+              target: msg.id,
+              mediaUrl: window.location.origin + `/media/${encodeURIComponent(currentlyPlayingFile)}`,
+              title: currentlyPlayingFile,
+              startTime: (localFilePlayer && localFilePlayer.currentTime) || 0
+            };
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify(msgObj));
+            }
           }
           return;
         }
 
         if (msg.type === 'viewer-left') {
+          const v = knownViewers.get(msg.id);
+          if (v) showToast(`${v.deviceName || 'Friend'} left 👋`);
           knownViewers.delete(msg.id);
           if (nativeConnections.has(msg.id)) {
             const conn = nativeConnections.get(msg.id);
@@ -1423,6 +1484,9 @@
       pc.oniceconnectionstatechange = () => {
         if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
           applyHighQualityParameters(pc);
+        } else if (pc.iceConnectionState === 'failed') {
+          console.warn('[WebRTC] ICE failed, restarting ICE...');
+          try { pc.restartIce(); } catch (e) {}
         }
       };
 
@@ -1744,7 +1808,7 @@
           sent++;
         }
       });
-      alert(sent > 0 ? `Sent a wave to your friends' screens! 👋` : 'No friends are watching yet. Share the link!');
+      showToast(sent > 0 ? `Sent a wave to your friends' screens! 👋` : 'No friends are watching yet. Share the link!');
     }
 
     // --- Dual Mode & Media Caster State ---
@@ -1848,6 +1912,7 @@
       dataConnections.forEach(conn => {
         if (conn.open) conn.send({ type: 'unmute-sound' });
       });
+      showToast('Unmute signal sent to TV 🔊');
     }
 
     async function startRealtimeFileCast(file) {
@@ -1882,7 +1947,7 @@
       }
 
       if (!capturedStream) {
-        alert('Your browser does not support video stream capture. Please use Chrome or Edge.');
+        showToast('Your browser does not support video stream capture. Please use Chrome or Edge.', 4000);
         return;
       }
 
@@ -2081,9 +2146,10 @@
           if (currentlyPlayingFile === filename) {
             stopCastingMedia();
           }
+          showToast(`Deleted ${filename}`);
           loadMediaList();
         })
-        .catch(() => alert('Could not delete file'));
+        .catch(() => showToast('Could not delete file'));
     }
 
     function setupMediaControls() {
@@ -2157,6 +2223,39 @@
 
     setupMediaControls();
     loadMediaList();
+
+    // Studio Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (e.target && ['input', 'textarea'].includes(e.target.tagName.toLowerCase())) return;
+      if (e.key === ' ' || e.code === 'Space') {
+        if (currentMode === 'media' && localFilePlayer) {
+          e.preventDefault();
+          togglePlayPause();
+        }
+      } else if (e.key === 'm' || e.key === 'M') {
+        if (currentMode === 'media') {
+          e.preventDefault();
+          toggleMute();
+        }
+      } else if (e.key === 'ArrowRight') {
+        if (currentMode === 'media') {
+          e.preventDefault();
+          jumpTime(10);
+        }
+      } else if (e.key === 'ArrowLeft') {
+        if (currentMode === 'media') {
+          e.preventDefault();
+          jumpTime(-10);
+        }
+      }
+    });
+
+    // Auto-reconnect to LAN WebSocket if temporarily interrupted
+    setInterval(() => {
+      if (signalingMode === 'cloud' || !ws || ws.readyState === WebSocket.CLOSED) {
+        tryLocalWebSocket();
+      }
+    }, 5000);
 
     initSignaling();
   </script>

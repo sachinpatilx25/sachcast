@@ -97,6 +97,31 @@
       100% { transform: translateX(-50%) scale(1); }
     }
 
+    .tv-toast {
+      position: fixed;
+      top: 2rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: rgba(10, 10, 10, 0.92);
+      color: #ffffff;
+      padding: 0.85rem 1.75rem;
+      border-radius: 9999px;
+      font-size: 1.15rem;
+      font-weight: 600;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(16px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.85);
+      z-index: 99999;
+      pointer-events: none;
+      opacity: 0;
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .tv-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
     #standbyScreen {
       position: absolute;
       inset: 0;
@@ -233,6 +258,8 @@
   <button id="unmuteFloatingBtn" onclick="unlockAudio()">
     🔊 Tap anywhere or press remote to Unmute Sound
   </button>
+
+  <div id="tvToast" class="tv-toast">👋 Your friend sent a wave!</div>
 
   <div id="displayContainer">
     <video id="tvVideo" autoplay playsinline webkit-playsinline></video>
@@ -452,6 +479,11 @@
           return;
         }
 
+        if (msg.type === 'flash-ping') {
+          showTvToast('👋 Your friend sent a wave!');
+          return;
+        }
+
         if (msg.type === 'presenter-disconnected') {
           showStandby('Stream Paused', 'Your friend disconnected. Waiting for them to rejoin...');
           return;
@@ -514,6 +546,7 @@
 
         if (msg.type === 'unmute-sound') {
           unlockAudio();
+          showTvToast('🔊 Sound Active 100%');
           return;
         }
 
@@ -712,8 +745,11 @@
         if (!data) return;
         if (data.type === 'stream-stopped') {
           showStandby('Sharing Stopped', 'Your friend stopped sharing their screen.');
+        } else if (data.type === 'flash-ping') {
+          showTvToast('👋 Your friend sent a wave!');
         } else if (data.type === 'unmute-sound') {
           unlockAudio();
+          showTvToast('🔊 Sound Active 100%');
         } else if (data.type === 'cast-media' && data.mediaUrl) {
           playbackMode = 'media';
           currentMediaTitle = data.title || 'Video';
@@ -781,21 +817,26 @@
       }
     }
 
-    // Silent unmuting on any user interaction (click, keypress, remote button)
-    function handleUserGesture() {
-      if (tvVideo.muted) {
-        tvVideo.muted = false;
-        tvVideo.play().catch(() => {});
-      }
+    let toastTimeout = null;
+    function showTvToast(msg) {
+      const toast = document.getElementById('tvToast');
+      if (!toast) return;
+      toast.innerText = msg;
+      toast.classList.add('show');
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
     }
 
-    window.addEventListener('click', () => {
-      handleUserGesture();
-    }, { passive: true });
+    // Unmuting on any user interaction (click, keypress, remote button)
+    function handleUserGesture() {
+      unlockAudio();
+    }
 
-    window.addEventListener('touchstart', () => {
-      handleUserGesture();
-    }, { passive: true });
+    window.addEventListener('click', handleUserGesture, { passive: true });
+    window.addEventListener('touchstart', handleUserGesture, { passive: true });
+    window.addEventListener('dblclick', toggleFullScreen);
 
     // Send real-time timeline progress back to presenter cockpit
     function sendMediaStatus() {
@@ -849,10 +890,13 @@
     });
 
     setInterval(() => {
+      if (signalingMode === 'cloud' || !ws || ws.readyState === WebSocket.CLOSED) {
+        tryLocalWebSocket();
+      }
       if (signalingMode === 'cloud' && (!dataConn || !dataConn.open)) {
         connectToHostPeerJS();
       }
-    }, 5000);
+    }, 4000);
 
     initTVReceiver();
   </script>
