@@ -13,10 +13,19 @@ function getLocalIpAddresses() {
   for (const name of Object.keys(interfaces)) {
     for (const net of interfaces[name]) {
       if (net.family === 'IPv4' && !net.internal) {
-        addresses.push({ iface: name, ip: net.address });
+        const lower = name.toLowerCase();
+        let priority = 10;
+        // Prioritize Wi-Fi and Ethernet
+        if (lower.includes('wi-fi') || lower.includes('wifi') || lower.includes('wlan')) priority = 1;
+        else if (lower.includes('ethernet') || lower.includes('eth') || lower.includes('en0') || lower.includes('lan')) priority = 2;
+        else if (lower.includes('hotspot') || lower.includes('local area connection*')) priority = 20;
+        else if (lower.includes('virtual') || lower.includes('vbox') || lower.includes('vmware') || lower.includes('vethernet')) priority = 30;
+
+        addresses.push({ iface: name, ip: net.address, priority });
       }
     }
   }
+  addresses.sort((a, b) => a.priority - b.priority);
   return addresses;
 }
 
@@ -135,6 +144,7 @@ function handleHttpRequest(req, res) {
 
 // Global WebSocket setup
 const allClients = new Set();
+const clientsById = new Map();
 
 function setupWebSocket(wss) {
   wss.on('connection', (ws, req) => {
@@ -150,6 +160,7 @@ function setupWebSocket(wss) {
     ws.isAlive = true;
 
     allClients.add(ws);
+    clientsById.set(ws.id, ws);
 
     ws.on('pong', () => {
       ws.isAlive = true;
@@ -253,13 +264,11 @@ function setupWebSocket(wss) {
           return;
         }
 
-        // WebRTC Signaling forwarding (offer, answer, candidate)
+        // WebRTC Signaling forwarding (offer, answer, candidate, ping, stats)
         if (data.target) {
-          for (const client of allClients) {
-            if (client.id === data.target && client.readyState === WebSocket.OPEN) {
-              client.send(JSON.stringify({ ...data, from: ws.id }));
-              break;
-            }
+          const targetClient = clientsById.get(data.target);
+          if (targetClient && targetClient.readyState === WebSocket.OPEN) {
+            targetClient.send(JSON.stringify({ ...data, from: ws.id }));
           }
           return;
         }
@@ -282,6 +291,7 @@ function setupWebSocket(wss) {
 
     ws.on('close', () => {
       allClients.delete(ws);
+      clientsById.delete(ws.id);
       if (ws.roomCode && rooms.has(ws.roomCode)) {
         const room = rooms.get(ws.roomCode);
         if (room.presenter === ws) {

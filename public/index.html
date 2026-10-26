@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
   <!-- Load QRCode library -->
   <script src="/qrcode.min.js"></script>
   <script>
@@ -17,6 +18,7 @@
       document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>');
     }
   </script>
+
   <!-- Load PeerJS library -->
   <script src="/peerjs.min.js"></script>
   <script>
@@ -35,6 +37,7 @@
       --text: #ffffff;
       --text-muted: #888888;
       --text-dim: #555555;
+      --accent: #ffffff;
     }
 
     * {
@@ -55,7 +58,7 @@
 
     /* Minimalist Header */
     header {
-      padding: 1.25rem 2.5rem;
+      padding: 1.1rem 2rem;
       border-bottom: 1px solid var(--border);
       display: flex;
       align-items: center;
@@ -137,10 +140,10 @@
       max-width: 1400px;
       width: 100%;
       margin: 0 auto;
-      padding: 2rem;
+      padding: 1.75rem;
       display: grid;
-      grid-template-columns: 1fr 380px;
-      gap: 2rem;
+      grid-template-columns: 1fr 390px;
+      gap: 1.75rem;
     }
 
     @media (max-width: 1024px) {
@@ -160,7 +163,7 @@
     }
 
     .stage-header {
-      padding: 1.1rem 1.5rem;
+      padding: 1rem 1.4rem;
       border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
@@ -171,6 +174,9 @@
       font-size: 0.95rem;
       font-weight: 600;
       letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
 
     .stage-meta {
@@ -193,6 +199,36 @@
       height: 100%;
       object-fit: contain;
       background: #000000;
+    }
+
+    /* Live HUD Overlay */
+    .stats-overlay {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .stat-chip {
+      background: rgba(0, 0, 0, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(8px);
+      padding: 0.35rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: #ffffff;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .stat-chip.active {
+      border-color: rgba(255, 255, 255, 0.5);
     }
 
     .empty-state {
@@ -227,8 +263,78 @@
       margin-bottom: 1.75rem;
     }
 
+    /* Tuning Settings Bar */
+    .tuning-bar {
+      background: #050505;
+      border-top: 1px solid var(--border);
+      padding: 0.85rem 1.4rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      font-size: 0.8rem;
+    }
+
+    .tuning-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .tuning-label {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+
+    .tuning-pill {
+      background: #111111;
+      border: 1px solid #333333;
+      color: #aaaaaa;
+      padding: 0.35rem 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-size: 0.78rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .tuning-pill:hover {
+      border-color: #666666;
+      color: #ffffff;
+    }
+
+    .tuning-pill.active {
+      background: #ffffff;
+      color: #000000;
+      border-color: #ffffff;
+      font-weight: 600;
+    }
+
+    .tuning-select {
+      background: #111111;
+      border: 1px solid #333333;
+      color: #ffffff;
+      padding: 0.35rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      outline: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .tuning-select:focus {
+      border-color: #ffffff;
+    }
+
     .stage-footer {
-      padding: 1.1rem 1.5rem;
+      padding: 1rem 1.4rem;
       border-top: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
@@ -271,7 +377,7 @@
     }
 
     .btn-stop {
-      background: #111111;
+      background: #161616;
       border: 1px solid #444444;
       color: #ffffff;
     }
@@ -292,7 +398,7 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 16px;
-      padding: 1.5rem;
+      padding: 1.4rem;
     }
 
     .panel-label {
@@ -431,11 +537,22 @@
     <!-- Screen Share Stage -->
     <div class="stage-card">
       <div class="stage-header">
-        <span class="stage-title">Screen Feed</span>
+        <span class="stage-title">
+          <span>Screen Feed</span>
+        </span>
         <span class="stage-meta" id="tvCountHeader">0 TV(s) Connected</span>
       </div>
 
       <div class="stage-body">
+        <!-- Live HUD Overlay -->
+        <div class="stats-overlay" id="statsOverlay" style="display: none;">
+          <div class="stat-chip active" id="chipLatency">⚡ Latency: -- ms</div>
+          <div class="stat-chip" id="chipFps">🎞️ 60 FPS</div>
+          <div class="stat-chip" id="chipBitrate">📶 -- Mbps</div>
+          <div class="stat-chip" id="chipRes">📺 --×--</div>
+          <div class="stat-chip" id="chipMode">💎 Detail</div>
+        </div>
+
         <div class="empty-state" id="emptyState">
           <div class="empty-icon">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -445,7 +562,7 @@
             </svg>
           </div>
           <h3>Share Screen to TV</h3>
-          <p>Wireless broadcast directly from your browser to your TV screen with ultra-low latency.</p>
+          <p>Ultra-low latency 60fps wireless broadcast directly to Smart TV browser with crystal-clear native quality.</p>
           <button class="btn-black" onclick="startScreenShare()">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
               <circle cx="12" cy="12" r="10"></circle>
@@ -455,6 +572,47 @@
           </button>
         </div>
         <video id="localVideo" autoplay playsinline muted style="display: none;"></video>
+      </div>
+
+      <!-- Broadcast Quality & Latency Settings Bar -->
+      <div class="tuning-bar">
+        <div class="tuning-group">
+          <span class="tuning-label">Mode:</span>
+          <button class="tuning-pill active" id="btnModeDetail" onclick="setQualityMode('detail')" title="Maintains exact pixel resolution for text, code, documents, and web browsing (Zero Blurring)">
+            💎 Crisp Detail
+          </button>
+          <button class="tuning-pill" id="btnModeMotion" onclick="setQualityMode('motion')" title="Prioritizes smooth 60fps refresh rate for video playback and gaming">
+            ⚡ Smooth 60 FPS
+          </button>
+        </div>
+
+        <div class="tuning-group">
+          <span class="tuning-label">Resolution:</span>
+          <select id="resSelect" class="tuning-select" onchange="onSettingChange()" title="Target capture resolution">
+            <option value="4k">4K UHD (3840×2160)</option>
+            <option value="1080p" selected>1080p FHD (1920×1080)</option>
+            <option value="720p">720p HD (1280×720)</option>
+          </select>
+        </div>
+
+        <div class="tuning-group">
+          <span class="tuning-label">Bitrate:</span>
+          <select id="bitrateSelect" class="tuning-select" onchange="onSettingChange()" title="WebRTC video encoding bitrate cap">
+            <option value="40000">40 Mbps (Ultra Quality)</option>
+            <option value="25000" selected>25 Mbps (Crystal Clear)</option>
+            <option value="15000">15 Mbps (Standard LAN)</option>
+            <option value="8000">8 Mbps (Wi-Fi Eco)</option>
+          </select>
+        </div>
+
+        <div class="tuning-group">
+          <span class="tuning-label">Codec:</span>
+          <select id="codecSelect" class="tuning-select" onchange="onSettingChange()" title="H.264 enables hardware ASIC decoding on Samsung, LG, FireTV, and Android TVs">
+            <option value="h264" selected>H.264 (Hardware TV)</option>
+            <option value="vp8">VP8</option>
+            <option value="vp9">VP9</option>
+          </select>
+        </div>
       </div>
 
       <div class="stage-footer">
@@ -484,12 +642,13 @@
           <div class="code-digits" id="roomCodeDisplay">7777</div>
         </div>
 
-        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;">
-          TV Browser URL:
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem; display: flex; justify-content: space-between; align-items: center;">
+          <span>TV Browser URL:</span>
+          <select id="ipSelect" class="tuning-select" style="display: none; padding: 0.15rem 0.4rem; font-size: 0.72rem;" onchange="onIpSelectChange()"></select>
         </div>
 
         <div class="url-box">
-          <span class="url-string" id="tvDirectUrl">https://.../tv</span>
+          <span class="url-string" id="tvDirectUrl">http://.../tv</span>
           <button class="copy-pill" onclick="copyDirectUrl()">Copy</button>
         </div>
       </div>
@@ -513,25 +672,67 @@
   </main>
 
   <script>
+    // --- Room & URL Configuration ---
     const urlParams = new URLSearchParams(window.location.search);
     let roomCode = urlParams.get('room') || '7777';
     document.getElementById('roomCodeDisplay').innerText = roomCode;
 
-    const currentOrigin = window.location.origin;
-    const tvUrl = `${currentOrigin}/tv?room=${roomCode}`;
+    let activeHost = window.location.host;
+    let tvUrl = `${window.location.origin}/tv?room=${roomCode}`;
     document.getElementById('tvDirectUrl').innerText = tvUrl;
 
-    try {
-      new QRCode(document.getElementById('qrcode'), {
-        text: tvUrl,
-        width: 130,
-        height: 130,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
-      });
-    } catch (e) {
-      console.warn('QR error:', e);
+    let qrCodeObj = null;
+    function updateQrCode(url) {
+      const qrElem = document.getElementById('qrcode');
+      qrElem.innerHTML = '';
+      try {
+        qrCodeObj = new QRCode(qrElem, {
+          text: url,
+          width: 130,
+          height: 130,
+          colorDark: "#000000",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      } catch (e) {
+        console.warn('QR error:', e);
+      }
+    }
+    updateQrCode(tvUrl);
+
+    // Fetch local network IP from server so TV gets true LAN address (not localhost)
+    fetch('/api/info')
+      .then(res => res.json())
+      .then(info => {
+        if (info && info.ip && info.ip !== '127.0.0.1') {
+          const port = window.location.port ? `:${window.location.port}` : '';
+          tvUrl = `http://${info.ip}${port}/tv?room=${roomCode}`;
+          document.getElementById('tvDirectUrl').innerText = tvUrl;
+          updateQrCode(tvUrl);
+
+          // Populate multiple IPs if available
+          if (info.ips && info.ips.length > 1) {
+            const select = document.getElementById('ipSelect');
+            select.innerHTML = '';
+            info.ips.forEach(ip => {
+              const opt = document.createElement('option');
+              opt.value = ip;
+              opt.innerText = ip;
+              if (ip === info.ip) opt.selected = true;
+              select.appendChild(opt);
+            });
+            select.style.display = 'inline-block';
+          }
+        }
+      })
+      .catch(() => {});
+
+    function onIpSelectChange() {
+      const select = document.getElementById('ipSelect');
+      const port = window.location.port ? `:${window.location.port}` : '';
+      tvUrl = `http://${select.value}${port}/tv?room=${roomCode}`;
+      document.getElementById('tvDirectUrl').innerText = tvUrl;
+      updateQrCode(tvUrl);
     }
 
     function copyDirectUrl() {
@@ -539,32 +740,374 @@
       alert('Copied URL: ' + tvUrl);
     }
 
-    let peer = null;
+    // --- Stream Quality Settings State ---
+    let currentQualityMode = 'detail'; // 'detail' (exact crisp text) or 'motion' (smooth 60fps)
+    let currentBitrateKbps = 25000;    // 25 Mbps
+    let currentResolution = '1080p';
+    let currentCodec = 'h264';
+
+    function setQualityMode(mode) {
+      currentQualityMode = mode;
+      document.getElementById('btnModeDetail').classList.toggle('active', mode === 'detail');
+      document.getElementById('btnModeMotion').classList.toggle('active', mode === 'motion');
+      document.getElementById('chipMode').innerText = mode === 'detail' ? '💎 Detail' : '⚡ 60 FPS';
+
+      // Apply contentHint dynamically on active stream
+      if (localStream) {
+        const videoTrack = localStream.getVideoTracks()[0];
+        if (videoTrack && 'contentHint' in videoTrack) {
+          videoTrack.contentHint = mode;
+        }
+      }
+
+      applyQualityToAllSenders();
+    }
+
+    function onSettingChange() {
+      currentResolution = document.getElementById('resSelect').value;
+      currentBitrateKbps = parseInt(document.getElementById('bitrateSelect').value, 10);
+      currentCodec = document.getElementById('codecSelect').value;
+      applyQualityToAllSenders();
+    }
+
+    // --- SDP Optimization (Exact Quality + Zero Playout Delay) ---
+    function optimizeSdp(sdp) {
+      const maxBitrate = currentBitrateKbps;
+      const minBitrate = Math.max(10000, Math.floor(maxBitrate * 0.5));
+      const startBitrate = Math.max(15000, Math.floor(maxBitrate * 0.75));
+
+      let lines = sdp.split('\r\n');
+      let newLines = [];
+      let inVideo = false;
+      let inAudio = false;
+
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+
+        if (line.startsWith('m=video')) {
+          inVideo = true;
+          inAudio = false;
+
+          // Reorder codecs so H.264 is first (Hardware decode on TV)
+          if (currentCodec === 'h264') {
+            const parts = line.split(' ');
+            const header = parts.slice(0, 3);
+            const pts = parts.slice(3);
+            const h264Pts = [];
+            const otherPts = [];
+
+            for (const pt of pts) {
+              const rtp = lines.find(l => l.startsWith(`a=rtpmap:${pt} H264/`));
+              if (rtp) h264Pts.push(pt);
+              else otherPts.push(pt);
+            }
+
+            if (h264Pts.length > 0) {
+              line = [...header, ...h264Pts, ...otherPts].join(' ');
+            }
+          }
+
+          newLines.push(line);
+          // Set maximum bandwidth limit right below m=video
+          newLines.push(`b=AS:${maxBitrate}`);
+          newLines.push(`b=TIAS:${maxBitrate * 1000}`);
+          // Instruct WebRTC zero render delay
+          newLines.push('a=playout-delay:0 0');
+          continue;
+        } else if (line.startsWith('m=audio')) {
+          inVideo = false;
+          inAudio = true;
+          newLines.push(line);
+          newLines.push('b=AS:320');
+          newLines.push('b=TIAS:320000');
+          continue;
+        } else if (line.startsWith('m=')) {
+          inVideo = false;
+          inAudio = false;
+        }
+
+        // Enhance video fmtp line with high start/min/max bitrates
+        if (inVideo && line.startsWith('a=fmtp:')) {
+          if (!line.includes('x-google-min-bitrate')) {
+            line = `${line};x-google-min-bitrate=${minBitrate};x-google-start-bitrate=${startBitrate};x-google-max-bitrate=${maxBitrate}`;
+          }
+        }
+
+        // Enhance Opus audio fmtp line with low latency and stereo 48kHz
+        if (inAudio && line.startsWith('a=fmtp:')) {
+          if (!line.includes('minptime=')) {
+            line = `${line};minptime=10;stereo=1;sprop-stereo=1;maxaveragebitrate=256000;cbr=1`;
+          }
+        }
+
+        newLines.push(line);
+      }
+
+      return newLines.join('\r\n');
+    }
+
+    // --- WebRTC RTCRtpSender Optimization ---
+    async function applyQualityToSender(pc) {
+      if (!pc || !pc.getSenders) return;
+      const senders = pc.getSenders();
+      for (const sender of senders) {
+        if (sender.track && sender.track.kind === 'video') {
+          try {
+            const params = sender.getParameters();
+            if (!params.encodings || params.encodings.length === 0) {
+              params.encodings = [{}];
+            }
+            params.encodings[0].maxBitrate = currentBitrateKbps * 1000;
+            params.encodings[0].maxFramerate = 60;
+            params.encodings[0].priority = 'high';
+            params.encodings[0].networkPriority = 'high';
+            // Maintain exact resolution for crisp detail, or framerate for smooth motion
+            params.degradationPreference = currentQualityMode === 'detail' 
+              ? 'maintain-resolution' 
+              : 'maintain-framerate';
+
+            await sender.setParameters(params);
+            console.log(`[Sender Quality] Configured ${currentBitrateKbps} kbps, 60fps, degradation: ${params.degradationPreference}`);
+          } catch (err) {
+            console.warn('Sender parameter tuning note:', err);
+          }
+        }
+      }
+    }
+
+    function applyQualityToAllSenders() {
+      nativeConnections.forEach(conn => applyQualityToSender(conn.pc));
+      activeCalls.forEach(call => {
+        if (call.peerConnection) applyQualityToSender(call.peerConnection);
+      });
+    }
+
+    // --- Hybrid Signaling & Connections State ---
     let localStream = null;
-    let activeCalls = new Map();
-    let dataConnections = new Map();
-    let knownViewers = new Map();
+    let signalingMode = 'unknown'; // 'lan' or 'cloud'
+    let ws = null;
+    let peer = null;
+
+    // Viewers Map: id -> { id, deviceName, ip, connectionType }
+    const knownViewers = new Map();
+
+    // Native WebRTC peer connections: viewerId -> { pc, dc, rtt }
+    const nativeConnections = new Map();
+
+    // PeerJS peer connections: viewerId -> call
+    const activeCalls = new Map();
+    const dataConnections = new Map();
 
     const rtcIceConfig = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
         { urls: 'stun:stun.cloudflare.com:3478' }
       ]
     };
 
-    function initPeerJS() {
-      const presenterPeerId = 'sachcast-host-' + roomCode;
+    // --- Initialize Hybrid Signaling ---
+    function initSignaling() {
+      // First attempt: Connect to Direct Local WebSocket for sub-millisecond LAN signaling
+      tryLocalWebSocket();
+    }
+
+    function tryLocalWebSocket() {
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${window.location.host}`;
       
+      console.log('[Signaling] Attempting Direct LAN WebSocket:', wsUrl);
+      let socketConnected = false;
+
+      try {
+        ws = new WebSocket(wsUrl);
+
+        const wsTimeout = setTimeout(() => {
+          if (!socketConnected) {
+            console.log('[Signaling] Local WS timeout. Falling back to PeerJS Cloud...');
+            try { ws.close(); } catch(e) {}
+            initPeerJS();
+          }
+        }, 2000);
+
+        ws.onopen = () => {
+          socketConnected = true;
+          clearTimeout(wsTimeout);
+          signalingMode = 'lan';
+          console.log('[Signaling] Connected via Direct LAN WebSocket ⚡');
+          document.getElementById('statusDot').classList.add('live');
+          document.getElementById('statusText').innerText = 'Ready (LAN ⚡)';
+
+          ws.send(JSON.stringify({
+            type: 'register-presenter',
+            code: roomCode
+          }));
+        };
+
+        ws.onmessage = (event) => {
+          handleWsMessage(event.data);
+        };
+
+        ws.onclose = () => {
+          if (signalingMode === 'lan') {
+            console.log('[Signaling] Local WS disconnected. Falling back to PeerJS...');
+            signalingMode = 'cloud';
+            initPeerJS();
+          }
+        };
+
+        ws.onerror = () => {
+          if (!socketConnected) {
+            clearTimeout(wsTimeout);
+            initPeerJS();
+          }
+        };
+      } catch (e) {
+        initPeerJS();
+      }
+    }
+
+    // --- Native WebRTC over Local WebSocket Signaling ---
+    function handleWsMessage(raw) {
+      try {
+        const msg = JSON.parse(raw);
+
+        if (msg.type === 'room-created') {
+          console.log(`[LAN] Room created [ ${msg.code} ]`);
+          if (msg.viewers) {
+            msg.viewers.forEach(v => {
+              knownViewers.set(v.id, { id: v.id, deviceName: v.deviceName || 'Smart TV', ip: v.ip });
+            });
+            renderViewers();
+          }
+          return;
+        }
+
+        if (msg.type === 'viewer-joined') {
+          console.log(`[LAN] Viewer joined:`, msg.id, msg.deviceName);
+          knownViewers.set(msg.id, { id: msg.id, deviceName: msg.deviceName || 'Smart TV', ip: msg.ip });
+          renderViewers();
+
+          if (localStream) {
+            callViewerNative(msg.id);
+          }
+          return;
+        }
+
+        if (msg.type === 'viewer-left') {
+          knownViewers.delete(msg.id);
+          if (nativeConnections.has(msg.id)) {
+            const conn = nativeConnections.get(msg.id);
+            try { conn.pc.close(); } catch (e) {}
+            nativeConnections.delete(msg.id);
+          }
+          renderViewers();
+          return;
+        }
+
+        // WebRTC Signaling Answer from Viewer
+        if (msg.type === 'signal-answer' && msg.from) {
+          const conn = nativeConnections.get(msg.from);
+          if (conn && conn.pc) {
+            conn.pc.setRemoteDescription(new RTCSessionDescription(msg.answer))
+              .then(() => applyQualityToSender(conn.pc))
+              .catch(e => console.warn('setRemoteDescription answer error:', e));
+          }
+          return;
+        }
+
+        // ICE Candidate from Viewer
+        if (msg.type === 'signal-candidate' && msg.from) {
+          const conn = nativeConnections.get(msg.from);
+          if (conn && conn.pc && msg.candidate) {
+            conn.pc.addIceCandidate(new RTCIceCandidate(msg.candidate))
+              .catch(e => console.warn('addIceCandidate error:', e));
+          }
+          return;
+        }
+
+      } catch (err) {
+        console.warn('Error parsing WS message:', err);
+      }
+    }
+
+    async function callViewerNative(viewerId) {
+      if (!localStream) return;
+
+      console.log(`[WebRTC LAN] Creating Native P2P offer for TV: ${viewerId}`);
+      const pc = new RTCPeerConnection(rtcIceConfig);
+
+      // Add local tracks with contentHint
+      localStream.getTracks().forEach(track => {
+        if (track.kind === 'video' && 'contentHint' in track) {
+          track.contentHint = currentQualityMode;
+        }
+        pc.addTrack(track, localStream);
+      });
+
+      // Prefer H.264 hardware decoding
+      if (window.RTCRtpSender && RTCRtpSender.getCapabilities) {
+        const caps = RTCRtpSender.getCapabilities('video');
+        if (caps && caps.codecs) {
+          const h264 = caps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/h264');
+          const others = caps.codecs.filter(c => c.mimeType.toLowerCase() !== 'video/h264');
+          const transceiver = pc.getTransceivers().find(t => t.sender && t.sender.track && t.sender.track.kind === 'video');
+          if (transceiver && transceiver.setCodecPreferences) {
+            try { transceiver.setCodecPreferences([...h264, ...others]); } catch(e) {}
+          }
+        }
+      }
+
+      // Create DataChannel for zero-latency ping/pong measurement
+      const dc = pc.createDataChannel('sachcast-latency', { ordered: false, maxRetransmits: 0 });
+      setupDataChannel(dc, viewerId);
+
+      nativeConnections.set(viewerId, { pc, dc, rtt: null });
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate && ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'signal-candidate',
+            target: viewerId,
+            candidate: event.candidate
+          }));
+        }
+      };
+
+      try {
+        const rawOffer = await pc.createOffer();
+        const optimizedSdp = optimizeSdp(rawOffer.sdp);
+        const tunedOffer = new RTCSessionDescription({ type: 'offer', sdp: optimizedSdp });
+
+        await pc.setLocalDescription(tunedOffer);
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'signal-offer',
+            target: viewerId,
+            offer: pc.localDescription
+          }));
+        }
+      } catch (err) {
+        console.error('Error creating native offer:', err);
+      }
+    }
+
+    // --- PeerJS Cloud Signaling (Fallback Mode for Vercel / Remote) ---
+    function initPeerJS() {
+      if (peer) return;
+      signalingMode = 'cloud';
+      const presenterPeerId = 'sachcast-host-' + roomCode;
+      console.log('[Signaling] Initializing PeerJS Cloud Mode for ID:', presenterPeerId);
+
       peer = new Peer(presenterPeerId, {
         debug: 1,
         config: rtcIceConfig
       });
 
-      peer.on('open', (id) => {
+      peer.on('open', () => {
         document.getElementById('statusDot').classList.add('live');
-        document.getElementById('statusText').innerText = 'Ready';
+        document.getElementById('statusText').innerText = 'Ready (Cloud ☁️)';
       });
 
       peer.on('connection', (conn) => {
@@ -573,12 +1116,12 @@
         conn.on('data', (data) => {
           if (data && data.type === 'hello') {
             knownViewers.set(conn.peer, {
-              peerId: conn.peer,
+              id: conn.peer,
               deviceName: data.deviceName || 'Smart TV'
             });
             renderViewers();
             if (localStream) {
-              callViewer(conn.peer);
+              callViewerPeerJS(conn.peer);
             }
           }
         });
@@ -598,25 +1141,130 @@
         activeCalls.set(call.peer, call);
         if (localStream) {
           call.answer(localStream);
-        } else {
-          call.on('close', () => activeCalls.delete(call.peer));
+          if (call.peerConnection) applyQualityToSender(call.peerConnection);
         }
       });
 
       peer.on('error', (err) => {
-        console.warn('Peer error:', err.type);
+        console.warn('PeerJS error:', err.type);
         if (err.type === 'unavailable-id') {
           roomCode = Math.floor(1000 + Math.random() * 9000).toString();
           document.getElementById('roomCodeDisplay').innerText = roomCode;
-          document.getElementById('tvDirectUrl').innerText = `${currentOrigin}/tv?room=${roomCode}`;
+          tvUrl = `${window.location.origin}/tv?room=${roomCode}`;
+          document.getElementById('tvDirectUrl').innerText = tvUrl;
+          updateQrCode(tvUrl);
           setTimeout(initPeerJS, 500);
-        } else {
-          document.getElementById('statusText').innerText = 'Reconnecting...';
-          setTimeout(initPeerJS, 3000);
         }
       });
     }
 
+    function callViewerPeerJS(viewerPeerId) {
+      if (!peer || !localStream) return;
+      console.log(`[PeerJS Cloud] Calling viewer: ${viewerPeerId}`);
+      const call = peer.call(viewerPeerId, localStream);
+      activeCalls.set(viewerPeerId, call);
+
+      if (call.peerConnection) {
+        applyQualityToSender(call.peerConnection);
+      }
+
+      call.on('close', () => activeCalls.delete(viewerPeerId));
+    }
+
+    // --- Latency Ping-Pong DataChannel ---
+    function setupDataChannel(dc, viewerId) {
+      dc.onopen = () => {
+        console.log(`[DataChannel] Latency channel opened with ${viewerId}`);
+      };
+
+      dc.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'pong' && data.t) {
+            const rtt = Math.round(performance.now() - data.t);
+            const conn = nativeConnections.get(viewerId);
+            if (conn) conn.rtt = rtt;
+
+            // Update live HUD
+            document.getElementById('chipLatency').innerText = `⚡ Latency: ${rtt} ms`;
+            document.getElementById('chipLatency').classList.add('active');
+
+            // Send back live stats to TV
+            if (dc.readyState === 'open') {
+              dc.send(JSON.stringify({
+                type: 'stats',
+                rtt,
+                fps: 60,
+                bitrate: currentBitrateKbps,
+                mode: currentQualityMode,
+                codec: currentCodec
+              }));
+            }
+          }
+        } catch (e) {}
+      };
+    }
+
+    // Ping loop: every 1000ms
+    setInterval(() => {
+      const now = performance.now();
+      nativeConnections.forEach((conn) => {
+        if (conn.dc && conn.dc.readyState === 'open') {
+          conn.dc.send(JSON.stringify({ type: 'ping', t: now }));
+        }
+      });
+
+      // Collect WebRTC statistics
+      updateStats();
+    }, 1000);
+
+    async function updateStats() {
+      if (!localStream) return;
+
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack) {
+        const settings = videoTrack.getSettings ? videoTrack.getSettings() : {};
+        if (settings.width && settings.height) {
+          document.getElementById('chipRes').innerText = `📺 ${settings.width}×${settings.height}`;
+        }
+        if (settings.frameRate) {
+          document.getElementById('chipFps').innerText = `🎞️ ${Math.round(settings.frameRate)} FPS`;
+        }
+      }
+
+      // Check first active connection stats for bitrate
+      let pc = null;
+      if (nativeConnections.size > 0) {
+        pc = nativeConnections.values().next().value.pc;
+      } else if (activeCalls.size > 0) {
+        pc = activeCalls.values().next().value.peerConnection;
+      }
+
+      if (pc && pc.getStats) {
+        try {
+          const stats = await pc.getStats();
+          stats.forEach(report => {
+            if (report.type === 'outbound-rtp' && report.kind === 'video') {
+              if (report.bytesSent && lastBytesSent) {
+                const now = report.timestamp;
+                const bytes = report.bytesSent - lastBytesSent;
+                const timeDiff = (now - lastTimestamp) / 1000;
+                if (timeDiff > 0) {
+                  const mbps = ((bytes * 8) / (timeDiff * 1000000)).toFixed(1);
+                  document.getElementById('chipBitrate').innerText = `📶 ${mbps} Mbps`;
+                }
+              }
+              lastBytesSent = report.bytesSent;
+              lastTimestamp = report.timestamp;
+            }
+          });
+        } catch (e) {}
+      }
+    }
+    let lastBytesSent = 0;
+    let lastTimestamp = 0;
+
+    // --- UI Viewers Rendering ---
     function renderViewers() {
       const list = document.getElementById('viewersList');
       const notice = document.getElementById('noViewersNotice');
@@ -644,51 +1292,70 @@
       });
     }
 
-    function callViewer(viewerPeerId) {
-      if (!peer || !localStream) return;
-      const call = peer.call(viewerPeerId, localStream);
-      activeCalls.set(viewerPeerId, call);
-      call.on('close', () => activeCalls.delete(viewerPeerId));
-    }
-
     function callAllViewers() {
-      if (!peer || !localStream) return;
-      for (const [viewerPeerId, _] of knownViewers) {
-        callViewer(viewerPeerId);
-      }
+      if (!localStream) return;
+      knownViewers.forEach((viewer, id) => {
+        if (signalingMode === 'lan') {
+          callViewerNative(id);
+        } else {
+          callViewerPeerJS(id);
+        }
+      });
     }
 
+    // --- Screen Sharing Capture ---
     async function startScreenShare() {
       try {
+        let videoConstraints = {
+          cursor: 'always',
+          frameRate: { ideal: 60, max: 60 }
+        };
+
+        if (currentResolution === '4k') {
+          videoConstraints.width = { ideal: 3840, max: 3840 };
+          videoConstraints.height = { ideal: 2160, max: 2160 };
+        } else if (currentResolution === '1080p') {
+          videoConstraints.width = { ideal: 1920, max: 1920 };
+          videoConstraints.height = { ideal: 1080, max: 1080 };
+        } else {
+          videoConstraints.width = { ideal: 1280, max: 1280 };
+          videoConstraints.height = { ideal: 720, max: 720 };
+        }
+
         localStream = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            cursor: 'always',
-            frameRate: { ideal: 60, max: 60 },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          },
+          video: videoConstraints,
           audio: {
             echoCancellation: false,
             noiseSuppression: false,
-            autoGainControl: false
+            autoGainControl: false,
+            channelCount: 2,
+            sampleRate: 48000,
+            latency: 0
           }
         });
+
+        // Apply contentHint for exact crystal-clear pixel rendering
+        const videoTrack = localStream.getVideoTracks()[0];
+        if (videoTrack && 'contentHint' in videoTrack) {
+          videoTrack.contentHint = currentQualityMode;
+        }
 
         const videoElem = document.getElementById('localVideo');
         videoElem.srcObject = localStream;
         videoElem.style.display = 'block';
         document.getElementById('emptyState').style.display = 'none';
+        document.getElementById('statsOverlay').style.display = 'flex';
         document.getElementById('startBtn').style.display = 'none';
         document.getElementById('stopBtn').style.display = 'inline-flex';
 
         callAllViewers();
 
-        localStream.getVideoTracks()[0].onended = () => {
+        videoTrack.onended = () => {
           stopScreenShare();
         };
 
       } catch (err) {
-        console.warn('Share canceled:', err);
+        console.warn('Share canceled or error:', err);
       }
     }
 
@@ -699,27 +1366,47 @@
       }
 
       document.getElementById('localVideo').style.display = 'none';
+      document.getElementById('statsOverlay').style.display = 'none';
       document.getElementById('emptyState').style.display = 'block';
       document.getElementById('startBtn').style.display = 'inline-flex';
       document.getElementById('stopBtn').style.display = 'none';
 
+      // Notify viewers
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'stream-stopped' }));
+      }
       dataConnections.forEach((conn) => {
         if (conn.open) conn.send({ type: 'stream-stopped' });
       });
+
+      // Close peer connections
+      nativeConnections.forEach(conn => {
+        try { conn.pc.close(); } catch (e) {}
+      });
+      nativeConnections.clear();
+
+      activeCalls.forEach(call => {
+        try { call.close(); } catch (e) {}
+      });
+      activeCalls.clear();
     }
 
     function sendFlashPing() {
       let sent = 0;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'flash-ping' }));
+        sent += knownViewers.size;
+      }
       dataConnections.forEach((conn) => {
         if (conn.open) {
           conn.send({ type: 'flash-ping' });
           sent++;
         }
       });
-      alert(sent > 0 ? `Sent ping to ${sent} connected TV(s)!` : 'No TVs connected yet.');
+      alert(sent > 0 ? `Sent test ping to connected TV(s)!` : 'No TVs connected yet.');
     }
 
-    initPeerJS();
+    initSignaling();
   </script>
 </body>
 </html>
