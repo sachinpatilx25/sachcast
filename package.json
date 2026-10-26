@@ -1,4 +1,22 @@
 {
+  "name": "sachcast",
+  "version": "2.0.0",
+  "description": "Ultra-low-latency real-time wireless screen sharing from PC to any Smart TV or browser in 60 FPS",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "webrtc",
+    "screen-sharing",
+    "smart-tv",
+    "real-time",
+    "low-latency",
+    "chromecast-alternative"
+  ],
+  "author": "sachinpatilx25",
+  "license": "MIT",
   "dependencies": {
     "ws": "^8.22.0"
   }

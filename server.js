@@ -109,7 +109,7 @@ function handleHttpRequest(req, res) {
   }
 
   // TV clean routing
-  if (reqPath === '/tv' || reqPath === '/t' || reqPath === '/tv.html' || reqPath === '/viewer') {
+  if (reqPath === '/tv' || reqPath === '/t' || reqPath === '/tv.html' || reqPath === '/viewer' || reqPath === '/tv/') {
     reqPath = '/tv.html';
   } else if (reqPath === '/' || reqPath === '') {
     // If request comes from a TV browser user agent, automatically route to TV view!
@@ -127,7 +127,13 @@ function handleHttpRequest(req, res) {
     reqPath = isTV ? '/tv.html' : '/index.html';
   }
 
-  const filePath = path.join(__dirname, 'public', reqPath);
+  const publicDir = path.join(__dirname, 'public');
+  const filePath = path.normalize(path.join(publicDir, reqPath));
+  if (!filePath.startsWith(publicDir)) {
+    res.writeHead(403, { 'Content-Type': 'text/plain' });
+    res.end('403 Forbidden');
+    return;
+  }
   const ext = path.extname(filePath).toLowerCase();
 
   fs.readFile(filePath, (err, content) => {

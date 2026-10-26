@@ -1,35 +1,21 @@
 {
-  "id": "sach-in",
-  "name": "SACH.IN",
-  "short_name": "SACH.IN",
-  "description": "Clean minimalist search dashboard, media engine, and link vault.",
-  "start_url": "./index.html",
-  "scope": "./",
+  "id": "sachcast",
+  "name": "SachCast - Screen Share",
+  "short_name": "SachCast",
+  "description": "Ultra-low-latency real-time wireless screen sharing to any TV or browser in 60 FPS.",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#000000",
   "theme_color": "#000000",
-  "categories": ["search", "utilities", "entertainment", "productivity"],
+  "categories": ["utilities", "entertainment", "productivity"],
   "icons": [
     {
-      "src": "icon.svg",
+      "src": "/icon.svg",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Search Engine",
-      "short_name": "Search",
-      "description": "Jump directly to the search cockpit",
-      "url": "./index.html#search"
-    },
-    {
-      "name": "Watch Later",
-      "short_name": "Watch Later",
-      "description": "View saved videos and movies",
-      "url": "./index.html#wl"
     }
   ]
 }
