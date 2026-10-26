@@ -188,6 +188,21 @@
       height: 100%;
       object-fit: contain;
       background: #000000;
+      pointer-events: none;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      will-change: transform;
+    }
+
+    #localVideo, #fileCasterVideo {
+      pointer-events: none;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      will-change: transform;
+    }
+
+    .empty-state, .cockpit-container, .drop-zone, .library-card {
+      pointer-events: auto;
     }
 
     .stats-overlay {
@@ -1397,10 +1412,10 @@
       const connData = { pc, dc: null, pendingCandidates: [] };
       nativeConnections.set(viewerId, connData);
 
-      // Add local tracks with contentHint detail (crisp text)
+      // Add local tracks with contentHint motion (fluid 60fps, prevents encoder stall on hover)
       localStream.getTracks().forEach(track => {
         if (track.kind === 'video' && 'contentHint' in track) {
-          track.contentHint = 'detail';
+          track.contentHint = 'motion';
         }
         pc.addTrack(track, localStream);
       });
@@ -1608,9 +1623,10 @@
         let stream = null;
         try {
           // 1. Pristine 1080p 60fps video + Zero-DSP direct 48kHz stereo system audio
+          // Using cursor: 'motion' prevents Windows DWM / MPO hardware cursor blackouts on hover
           stream = await navigator.mediaDevices.getDisplayMedia({
             video: {
-              cursor: 'always',
+              cursor: 'motion',
               displaySurface: 'monitor',
               width: { ideal: 1920, max: 1920 },
               height: { ideal: 1080, max: 1080 },
@@ -1630,7 +1646,7 @@
             // Fallback with standard audio
             stream = await navigator.mediaDevices.getDisplayMedia({
               video: {
-                cursor: 'always',
+                cursor: 'motion',
                 displaySurface: 'monitor',
                 width: { ideal: 1920, max: 1920 },
                 height: { ideal: 1080, max: 1080 },
@@ -1639,26 +1655,34 @@
               audio: true
             });
           } catch (audioErr2) {
-            // Fallback to video-only if audio not supported or refused
-            stream = await navigator.mediaDevices.getDisplayMedia({
-              video: {
-                cursor: 'always',
-                displaySurface: 'monitor',
-                width: { ideal: 1920, max: 1920 },
-                height: { ideal: 1080, max: 1080 },
-                frameRate: { ideal: 60, max: 60 }
-              },
-              audio: false
-            });
+            try {
+              // Fallback to video-only if audio not supported or refused
+              stream = await navigator.mediaDevices.getDisplayMedia({
+                video: {
+                  cursor: 'motion',
+                  displaySurface: 'monitor',
+                  width: { ideal: 1920, max: 1920 },
+                  height: { ideal: 1080, max: 1080 },
+                  frameRate: { ideal: 60, max: 60 }
+                },
+                audio: false
+              });
+            } catch (audioErr3) {
+              // Generic fallback without constraints
+              stream = await navigator.mediaDevices.getDisplayMedia({
+                video: true,
+                audio: false
+              });
+            }
           }
         }
 
         localStream = stream;
 
-        // Apply contentHint for exact native text clarity
+        // Apply contentHint 'motion' so mouse hover and movement don't stall the video encoder
         const videoTrack = localStream.getVideoTracks()[0];
         if (videoTrack && 'contentHint' in videoTrack) {
-          videoTrack.contentHint = 'detail';
+          videoTrack.contentHint = 'motion';
         }
 
         const videoElem = document.getElementById('localVideo');

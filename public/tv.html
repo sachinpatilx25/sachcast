@@ -38,8 +38,8 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Clear screen mode: hide cursor when video is playing */
-    body.playing, body.playing * {
+    /* Clear screen mode: hide cursor cleanly when video is playing */
+    body.playing {
       cursor: none !important;
     }
 
@@ -54,6 +54,7 @@
       justify-content: center;
       z-index: 1;
       overflow: hidden;
+      pointer-events: none;
     }
 
     video {
@@ -63,6 +64,10 @@
       background: #000000;
       border: none;
       outline: none;
+      pointer-events: none;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      will-change: transform;
     }
 
     #unmuteFloatingBtn {
