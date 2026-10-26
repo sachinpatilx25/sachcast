@@ -38,6 +38,11 @@
       -webkit-font-smoothing: antialiased;
     }
 
+    /* Clear screen mode: hide cursor when video is playing */
+    body.playing, body.playing * {
+      cursor: none !important;
+    }
+
     #displayContainer {
       position: absolute;
       inset: 0;
@@ -48,6 +53,7 @@
       align-items: center;
       justify-content: center;
       z-index: 1;
+      overflow: hidden;
     }
 
     video {
@@ -55,6 +61,8 @@
       height: 100vh;
       object-fit: contain;
       background: #000000;
+      border: none;
+      outline: none;
       image-rendering: -webkit-optimize-contrast;
       image-rendering: crisp-edges;
     }
@@ -70,7 +78,7 @@
       z-index: 10;
       text-align: center;
       padding: 2.5rem;
-      transition: opacity 0.4s ease;
+      transition: opacity 0.3s ease;
     }
 
     .minimal-icon {
@@ -166,91 +174,9 @@
       background: #ffffff;
       box-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
     }
-
-    .tv-hud {
-      position: absolute;
-      top: 1.5rem;
-      right: 1.5rem;
-      z-index: 25;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-
-    body:hover .tv-hud, body:focus-within .tv-hud, body.hud-visible .tv-hud {
-      opacity: 1;
-    }
-
-    .tv-stat-pill {
-      background: rgba(0, 0, 0, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: #ffffff;
-      padding: 0.5rem 1rem;
-      border-radius: 8px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
-      backdrop-filter: blur(8px);
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .hud-btn {
-      background: rgba(0, 0, 0, 0.8);
-      border: 1px solid #333333;
-      color: #ffffff;
-      padding: 0.65rem 1.15rem;
-      border-radius: 8px;
-      font-family: inherit;
-      font-size: 0.85rem;
-      font-weight: 500;
-      cursor: pointer;
-      backdrop-filter: blur(8px);
-      transition: all 0.15s;
-    }
-
-    .hud-btn:hover, .hud-btn:focus {
-      background: #ffffff;
-      color: #000000;
-    }
-
-    #flashOverlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(255, 255, 255, 0.25);
-      z-index: 40;
-      pointer-events: none;
-      display: none;
-    }
-
-    #audioPrompt {
-      display: none;
-      position: absolute;
-      bottom: 2.5rem;
-      background: rgba(10, 10, 10, 0.9);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: 12px;
-      padding: 1rem 1.8rem;
-      z-index: 30;
-      cursor: pointer;
-      font-size: 1rem;
-      font-weight: 500;
-      color: #ffffff;
-      backdrop-filter: blur(8px);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
-    }
   </style>
 </head>
 <body>
-  <div id="flashOverlay"></div>
-
-  <div class="tv-hud" id="tvHud">
-    <div class="tv-stat-pill" id="hudStats">⚡ Ultra-Low Latency • 60 FPS • WebRTC</div>
-    <button class="hud-btn" onclick="toggleFullScreen()">⛶ Fullscreen</button>
-  </div>
-
   <div id="standbyScreen">
     <div class="minimal-icon">
       <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -274,11 +200,7 @@
   </div>
 
   <div id="displayContainer">
-    <video id="tvVideo" autoplay playsinline webkit-playsinline muted></video>
-  </div>
-
-  <div id="audioPrompt" onclick="enableAudio()">
-    🔊 Audio muted by TV browser. Press Remote OK or Click to unmute.
+    <video id="tvVideo" autoplay playsinline webkit-playsinline></video>
   </div>
 
   <script>
@@ -288,10 +210,7 @@
     const screenSubtitle = document.getElementById('screenSubtitle');
     const statusLabel = document.getElementById('statusLabel');
     const statusDot = document.getElementById('statusDot');
-    const audioPrompt = document.getElementById('audioPrompt');
-    const flashOverlay = document.getElementById('flashOverlay');
     const manualCodeInput = document.getElementById('manualCode');
-    const hudStats = document.getElementById('hudStats');
 
     const urlParams = new URLSearchParams(window.location.search);
     let roomCode = urlParams.get('room') || '7777';
@@ -305,6 +224,7 @@
     let dataConn = null;
     let currentPresenterId = null;
     let pendingCandidates = [];
+    let remoteStream = null;
 
     const rtcIceConfig = {
       iceServers: [
@@ -337,11 +257,11 @@
       if (document.visibilityState === 'visible') requestWakeLock();
     });
 
-    // Zero playout delay & zero jitter buffer
-    function tuneVideoReceiver(pc) {
+    // Zero playout delay & zero jitter buffer for BOTH audio and video
+    function tuneMediaReceivers(pc) {
       if (!pc || !pc.getReceivers) return;
       pc.getReceivers().forEach(receiver => {
-        if (receiver.track && receiver.track.kind === 'video') {
+        if (receiver.track) {
           if ('jitterBufferTarget' in receiver) {
             try { receiver.jitterBufferTarget = 0; } catch (e) {}
           }
@@ -352,41 +272,26 @@
       });
     }
 
-    // Permanent zero-stutter drift eliminator
-    // Uses smooth playback rate micro-adjustments instead of hard seeks to prevent hardware decoder flushing and slowdown
+    // Resync only on severe freeze/sleep - never alter playbackRate so audio stays 100% in sync
     setInterval(() => {
       if (!tvVideo.srcObject || tvVideo.paused) return;
       if (tvVideo.buffered && tvVideo.buffered.length > 0) {
         const end = tvVideo.buffered.end(tvVideo.buffered.length - 1);
         const drift = end - tvVideo.currentTime;
-
-        if (drift > 1.2) {
-          // Significant lag (e.g. computer sleep or background tab) -> clean live jump
+        if (drift > 2.5) {
           try {
-            tvVideo.currentTime = end;
-            tvVideo.playbackRate = 1.0;
+            tvVideo.currentTime = end - 0.02;
           } catch (e) {}
-        } else if (drift > 0.22) {
-          // Micro-drift (220ms - 1200ms): subtly accelerate (1.06x) to catch up seamlessly
-          // Zero decoder flush, zero frame drop, 100% smooth continuous playback!
-          tvVideo.playbackRate = 1.06;
-        } else if (drift < 0.08) {
-          // Buffer caught up: return to normal 1.0x playback speed
-          tvVideo.playbackRate = 1.0;
         }
       }
-    }, 500);
+    }, 1000);
 
-    // Continuous playback protection: auto-resume if TV browser pauses or stalls
+    // Auto-resume if TV browser temporarily pauses
     tvVideo.addEventListener('stalled', () => {
-      if (tvVideo.srcObject && !tvVideo.paused) {
-        tvVideo.play().catch(() => {});
-      }
+      if (tvVideo.srcObject && !tvVideo.paused) tvVideo.play().catch(() => {});
     });
     tvVideo.addEventListener('waiting', () => {
-      if (tvVideo.srcObject && !tvVideo.paused) {
-        tvVideo.play().catch(() => {});
-      }
+      if (tvVideo.srcObject && !tvVideo.paused) tvVideo.play().catch(() => {});
     });
     tvVideo.addEventListener('pause', () => {
       if (tvVideo.srcObject && standbyScreen.style.display === 'none') {
@@ -493,11 +398,6 @@
           return;
         }
 
-        if (msg.type === 'flash-ping') {
-          flashScreen();
-          return;
-        }
-
         // WebRTC Offer from Presenter
         if (msg.type === 'signal-offer' && msg.offer) {
           currentPresenterId = msg.from;
@@ -529,24 +429,32 @@
 
       nativePc = new RTCPeerConnection(rtcIceConfig);
       pendingCandidates = [];
+      remoteStream = null;
 
       nativePc.ontrack = (event) => {
-        console.log('[WebRTC LAN] Remote stream received:', event.streams);
-        tuneVideoReceiver(nativePc);
-
-        const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
-        tvVideo.srcObject = stream;
-
-        hideStandby();
-        tvVideo.play().catch(() => {});
-
-        // Prompt for audio unmute only if stream contains active audio tracks
-        const hasAudio = stream.getAudioTracks().length > 0;
-        if (hasAudio && tvVideo.muted) {
-          audioPrompt.style.display = 'block';
-        } else {
-          audioPrompt.style.display = 'none';
+        console.log('[WebRTC LAN] Remote track received:', event.track.kind);
+        
+        // Group all incoming tracks into the same MediaStream for hardware A/V lip-sync
+        if (!remoteStream) {
+          remoteStream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream();
+          tvVideo.srcObject = remoteStream;
         }
+
+        if (!remoteStream.getTracks().includes(event.track)) {
+          remoteStream.addTrack(event.track);
+        }
+
+        tuneMediaReceivers(nativePc);
+        hideStandby();
+
+        // Attempt instant playback with full sound
+        tvVideo.muted = false;
+        tvVideo.volume = 1.0;
+        tvVideo.play().catch(() => {
+          // If browser policy requires user gesture to play sound, start muted silently (no screen prompt)
+          tvVideo.muted = true;
+          tvVideo.play().catch(() => {});
+        });
       };
 
       nativePc.ondatachannel = (event) => {
@@ -566,9 +474,8 @@
 
       try {
         await nativePc.setRemoteDescription(new RTCSessionDescription(offer));
-        tuneVideoReceiver(nativePc);
+        tuneMediaReceivers(nativePc);
 
-        // Safely flush queued ICE candidates
         if (pendingCandidates.length > 0) {
           for (const cand of pendingCandidates) {
             await nativePc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
@@ -595,17 +502,10 @@
       dc.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-
           if (data.type === 'ping' && data.t) {
             if (dc.readyState === 'open') {
               dc.send(JSON.stringify({ type: 'pong', t: data.t }));
             }
-            return;
-          }
-
-          if (data.type === 'stats') {
-            hudStats.innerText = `⚡ ${data.rtt}ms | 60 FPS | Native Quality`;
-            showHudBriefly();
           }
         } catch (e) {}
       };
@@ -635,22 +535,21 @@
         call.answer();
 
         if (call.peerConnection) {
-          tuneVideoReceiver(call.peerConnection);
+          tuneMediaReceivers(call.peerConnection);
         }
 
-        call.on('stream', (remoteStream) => {
+        call.on('stream', (stream) => {
           hideStandby();
+          remoteStream = stream;
           tvVideo.srcObject = remoteStream;
-          tuneVideoReceiver(call.peerConnection);
+          tuneMediaReceivers(call.peerConnection);
 
-          tvVideo.play().catch(() => {});
-
-          const hasAudio = remoteStream.getAudioTracks().length > 0;
-          if (hasAudio && tvVideo.muted) {
-            audioPrompt.style.display = 'block';
-          } else {
-            audioPrompt.style.display = 'none';
-          }
+          tvVideo.muted = false;
+          tvVideo.volume = 1.0;
+          tvVideo.play().catch(() => {
+            tvVideo.muted = true;
+            tvVideo.play().catch(() => {});
+          });
         });
       });
 
@@ -678,9 +577,7 @@
       });
 
       dataConn.on('data', (data) => {
-        if (data && data.type === 'flash-ping') {
-          flashScreen();
-        } else if (data && data.type === 'stream-stopped') {
+        if (data && data.type === 'stream-stopped') {
           showStandby('Broadcast Stopped', 'Waiting for PC to resume sharing...');
         }
       });
@@ -700,31 +597,17 @@
     }
 
     function hideStandby() {
-      standbyScreen.style.opacity = '0';
-      setTimeout(() => {
-        standbyScreen.style.display = 'none';
-      }, 400);
-      showHudBriefly();
+      standbyScreen.style.display = 'none';
+      document.body.classList.add('playing');
     }
 
     function showStandby(title, sub) {
+      document.body.classList.remove('playing');
       standbyScreen.style.display = 'flex';
-      setTimeout(() => { standbyScreen.style.opacity = '1'; }, 10);
       screenTitle.innerText = title;
       screenSubtitle.innerText = sub;
       tvVideo.srcObject = null;
-      audioPrompt.style.display = 'none';
-    }
-
-    function flashScreen() {
-      flashOverlay.style.display = 'block';
-      setTimeout(() => { flashOverlay.style.display = 'none'; }, 400);
-    }
-
-    function enableAudio() {
-      tvVideo.muted = false;
-      tvVideo.play().catch(() => {});
-      audioPrompt.style.display = 'none';
+      remoteStream = null;
     }
 
     function toggleFullScreen() {
@@ -735,18 +618,24 @@
       }
     }
 
-    let hudTimer = null;
-    function showHudBriefly() {
-      document.body.classList.add('hud-visible');
-      if (hudTimer) clearTimeout(hudTimer);
-      hudTimer = setTimeout(() => {
-        document.body.classList.remove('hud-visible');
-      }, 4000);
+    // Silent unmuting on any user interaction (click, keypress, remote button)
+    function handleUserGesture() {
+      if (tvVideo.muted) {
+        tvVideo.muted = false;
+        tvVideo.play().catch(() => {});
+      }
     }
 
+    window.addEventListener('click', () => {
+      handleUserGesture();
+    }, { passive: true });
+
+    window.addEventListener('touchstart', () => {
+      handleUserGesture();
+    }, { passive: true });
+
     window.addEventListener('keydown', (e) => {
-      enableAudio();
-      showHudBriefly();
+      handleUserGesture();
 
       if (e.key === 'Enter' || e.keyCode === 13 || e.key === ' ' || e.keyCode === 32) {
         if (standbyScreen.style.display !== 'none' && document.activeElement === manualCodeInput) {
@@ -755,15 +644,6 @@
           toggleFullScreen();
         }
       }
-    });
-
-    window.addEventListener('click', () => {
-      enableAudio();
-      showHudBriefly();
-    });
-
-    window.addEventListener('mousemove', () => {
-      showHudBriefly();
     });
 
     setInterval(() => {

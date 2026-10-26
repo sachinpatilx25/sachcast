@@ -474,14 +474,6 @@
       </div>
 
       <div class="stage-body">
-        <div class="stats-overlay" id="statsOverlay" style="display: none;">
-          <div class="stat-chip" id="chipLatency">⚡ Latency: -- ms</div>
-          <div class="stat-chip" id="chipFps">🎞️ 60 FPS (Locked)</div>
-          <div class="stat-chip" id="chipBitrate">📶 14 Mbps (Optimal)</div>
-          <div class="stat-chip" id="chipRes">📺 Native 1080p60</div>
-          <div class="stat-chip">💎 Crisp Text • H.264 Zero-Lag</div>
-        </div>
-
         <div class="empty-state" id="emptyState">
           <div class="empty-icon">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -619,36 +611,37 @@
       if (!pc || !pc.getSenders) return;
       const senders = pc.getSenders();
       for (const sender of senders) {
-        if (sender.track && sender.track.kind === 'video') {
-          try {
-            const params = sender.getParameters();
-            if (!params.encodings || params.encodings.length === 0) {
-              params.encodings = [{}];
-            }
+        if (!sender.track) continue;
+        try {
+          const params = sender.getParameters();
+          if (!params.encodings || params.encodings.length === 0) {
+            params.encodings = [{}];
+          }
+          if (sender.track.kind === 'video') {
             params.encodings[0].maxBitrate = MAX_BITRATE_BPS;
             params.encodings[0].maxFramerate = 60;
             params.encodings[0].priority = 'high';
             params.encodings[0].networkPriority = 'high';
-            // Lock framerate permanently - prevents stream from slowing down or lagging over time!
             params.degradationPreference = 'maintain-framerate';
-
-            await sender.setParameters(params);
-            console.log('[Quality] Locked to 14 Mbps 60 FPS Maintain-Framerate');
-          } catch (err) {
-            console.warn('Could not set sender parameters:', err);
+          } else if (sender.track.kind === 'audio') {
+            params.encodings[0].priority = 'high';
+            params.encodings[0].networkPriority = 'high';
+            params.encodings[0].maxBitrate = 192000;
           }
+          await sender.setParameters(params);
+        } catch (err) {
+          console.warn('Could not set sender parameters for', sender.track.kind, err);
         }
       }
     }
 
-    function prioritizeH264(pc) {
+    function prioritizeCodecs(pc) {
       if (window.RTCRtpSender && RTCRtpSender.getCapabilities) {
-        const caps = RTCRtpSender.getCapabilities('video');
-        if (caps && caps.codecs) {
-          const h264 = caps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/h264');
-          const others = caps.codecs.filter(c => c.mimeType.toLowerCase() !== 'video/h264');
-
-          // Prioritize Baseline / Packetization-mode=1 for zero-latency instant TV hardware decode
+        // 1. Video codecs: Prioritize H.264 baseline for zero-latency instant decode
+        const videoCaps = RTCRtpSender.getCapabilities('video');
+        if (videoCaps && videoCaps.codecs) {
+          const h264 = videoCaps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/h264');
+          const others = videoCaps.codecs.filter(c => c.mimeType.toLowerCase() !== 'video/h264');
           h264.sort((a, b) => {
             const aParams = (a.sdpFmtpLine || '').toLowerCase();
             const bParams = (b.sdpFmtpLine || '').toLowerCase();
@@ -656,12 +649,19 @@
             const bScore = (bParams.includes('42e01f') ? 2 : 0) + (bParams.includes('packetization-mode=1') ? 1 : 0);
             return bScore - aScore;
           });
-
-          const transceiver = pc.getTransceivers().find(t => t.sender && t.sender.track && t.sender.track.kind === 'video');
-          if (transceiver && transceiver.setCodecPreferences) {
-            try {
-              transceiver.setCodecPreferences([...h264, ...others]);
-            } catch (e) {}
+          const videoTransceiver = pc.getTransceivers().find(t => t.sender && t.sender.track && t.sender.track.kind === 'video');
+          if (videoTransceiver && videoTransceiver.setCodecPreferences) {
+            try { videoTransceiver.setCodecPreferences([...h264, ...others]); } catch (e) {}
+          }
+        }
+        // 2. Audio codecs: Prioritize Opus high fidelity
+        const audioCaps = RTCRtpSender.getCapabilities('audio');
+        if (audioCaps && audioCaps.codecs) {
+          const opus = audioCaps.codecs.filter(c => c.mimeType.toLowerCase() === 'audio/opus');
+          const otherAudio = audioCaps.codecs.filter(c => c.mimeType.toLowerCase() !== 'audio/opus');
+          const audioTransceiver = pc.getTransceivers().find(t => t.sender && t.sender.track && t.sender.track.kind === 'audio');
+          if (audioTransceiver && audioTransceiver.setCodecPreferences) {
+            try { audioTransceiver.setCodecPreferences([...opus, ...otherAudio]); } catch (e) {}
           }
         }
       }
@@ -848,7 +848,7 @@
         }
       };
 
-      prioritizeH264(pc);
+      prioritizeCodecs(pc);
 
       // DataChannel for latency ping/pong
       const dc = pc.createDataChannel('sachcast-latency', { ordered: false, maxRetransmits: 0 });
@@ -963,11 +963,8 @@
           const data = JSON.parse(event.data);
           if (data.type === 'pong' && data.t) {
             const rtt = Math.round(performance.now() - data.t);
-            document.getElementById('chipLatency').innerText = `⚡ Latency: ${rtt} ms`;
-
-            if (dc.readyState === 'open') {
-              dc.send(JSON.stringify({ type: 'stats', rtt }));
-            }
+            const count = knownViewers.size;
+            document.getElementById('tvCountHeader').innerText = `${count} TV(s) Connected • ${rtt}ms`;
           }
         } catch (e) {}
       };
@@ -1039,7 +1036,7 @@
       try {
         let stream = null;
         try {
-          // Attempt capture with audio first (1080p 60fps locked for permanent silky-smooth casting)
+          // 1. Pristine 1080p 60fps video + Zero-DSP direct 48kHz stereo system audio
           stream = await navigator.mediaDevices.getDisplayMedia({
             video: {
               cursor: 'always',
@@ -1048,21 +1045,41 @@
               height: { ideal: 1080, max: 1080 },
               frameRate: { ideal: 60, max: 60 }
             },
-            audio: true
+            audio: {
+              echoCancellation: false,
+              noiseSuppression: false,
+              autoGainControl: false,
+              channelCount: 2,
+              sampleRate: 48000,
+              latency: 0
+            }
           });
         } catch (audioErr) {
-          // Fallback to video-only if audio is not supported or refused
-          console.warn('Audio capture unavailable, falling back to video-only:', audioErr);
-          stream = await navigator.mediaDevices.getDisplayMedia({
-            video: {
-              cursor: 'always',
-              displaySurface: 'monitor',
-              width: { ideal: 1920, max: 1920 },
-              height: { ideal: 1080, max: 1080 },
-              frameRate: { ideal: 60, max: 60 }
-            },
-            audio: false
-          });
+          try {
+            // Fallback with standard audio
+            stream = await navigator.mediaDevices.getDisplayMedia({
+              video: {
+                cursor: 'always',
+                displaySurface: 'monitor',
+                width: { ideal: 1920, max: 1920 },
+                height: { ideal: 1080, max: 1080 },
+                frameRate: { ideal: 60, max: 60 }
+              },
+              audio: true
+            });
+          } catch (audioErr2) {
+            // Fallback to video-only if audio not supported or refused
+            stream = await navigator.mediaDevices.getDisplayMedia({
+              video: {
+                cursor: 'always',
+                displaySurface: 'monitor',
+                width: { ideal: 1920, max: 1920 },
+                height: { ideal: 1080, max: 1080 },
+                frameRate: { ideal: 60, max: 60 }
+              },
+              audio: false
+            });
+          }
         }
 
         localStream = stream;
@@ -1077,15 +1094,8 @@
         videoElem.srcObject = localStream;
         videoElem.style.display = 'block';
         document.getElementById('emptyState').style.display = 'none';
-        document.getElementById('statsOverlay').style.display = 'flex';
         document.getElementById('startBtn').style.display = 'none';
         document.getElementById('stopBtn').style.display = 'inline-flex';
-
-        // Update resolution on HUD
-        const settings = videoTrack.getSettings ? videoTrack.getSettings() : {};
-        if (settings.width && settings.height) {
-          document.getElementById('chipRes').innerText = `📺 ${settings.width}×${settings.height}`;
-        }
 
         callAllViewers();
 
@@ -1105,7 +1115,6 @@
       }
 
       document.getElementById('localVideo').style.display = 'none';
-      document.getElementById('statsOverlay').style.display = 'none';
       document.getElementById('emptyState').style.display = 'block';
       document.getElementById('startBtn').style.display = 'inline-flex';
       document.getElementById('stopBtn').style.display = 'none';
