@@ -63,8 +63,33 @@
       background: #000000;
       border: none;
       outline: none;
-      image-rendering: -webkit-optimize-contrast;
-      image-rendering: crisp-edges;
+    }
+
+    #unmuteFloatingBtn {
+      position: absolute;
+      bottom: 2.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ffffff;
+      color: #000000;
+      padding: 1rem 2rem;
+      border-radius: 9999px;
+      font-weight: 700;
+      font-size: 1.15rem;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.9), 0 0 20px rgba(255, 255, 255, 0.9);
+      z-index: 99999;
+      display: none;
+      align-items: center;
+      gap: 0.75rem;
+      animation: pulseBtn 1.5s infinite;
+    }
+
+    @keyframes pulseBtn {
+      0% { transform: translateX(-50%) scale(1); }
+      50% { transform: translateX(-50%) scale(1.06); }
+      100% { transform: translateX(-50%) scale(1); }
     }
 
     #standbyScreen {
@@ -193,11 +218,16 @@
       <button class="connect-btn" onclick="applyManualCode()">Join</button>
     </div>
 
-    <div class="status-badge" id="statusBadge">
+    <div class="status-badge" id="statusBadge" onclick="unlockAudio()" style="cursor: pointer;" title="Click to unlock sound">
       <div class="indicator-dot" id="statusDot"></div>
       <span id="statusLabel">Ready</span>
+      <span style="color: #ffffff; margin-left: 0.5rem;" id="soundStatusText">🔊 Sound Active</span>
     </div>
   </div>
+
+  <button id="unmuteFloatingBtn" onclick="unlockAudio()">
+    🔊 Tap anywhere or press remote to Unmute Sound
+  </button>
 
   <div id="displayContainer">
     <video id="tvVideo" autoplay playsinline webkit-playsinline></video>
@@ -274,19 +304,46 @@
       });
     }
 
-    // Resync only on severe freeze/sleep - never alter playbackRate so audio stays 100% in sync
-    setInterval(() => {
-      if (!tvVideo.srcObject || tvVideo.paused) return;
-      if (tvVideo.buffered && tvVideo.buffered.length > 0) {
-        const end = tvVideo.buffered.end(tvVideo.buffered.length - 1);
-        const drift = end - tvVideo.currentTime;
-        if (drift > 2.5) {
-          try {
-            tvVideo.currentTime = end - 0.02;
-          } catch (e) {}
+    // Audio Context & Unmute Handler: Ensures sound is NEVER muted
+    let audioCtx = null;
+    let audioUnlocked = false;
+
+    function unlockAudio() {
+      audioUnlocked = true;
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+      } catch (e) {}
+
+      tvVideo.muted = false;
+      tvVideo.volume = 1.0;
+
+      const soundText = document.getElementById('soundStatusText');
+      if (soundText) soundText.innerText = 'Sound Active 100% 🔊';
+
+      const floatingBtn = document.getElementById('unmuteFloatingBtn');
+      if (floatingBtn) floatingBtn.style.display = 'none';
+
+      if (tvVideo.srcObject || tvVideo.src) {
+        tvVideo.play().catch(() => {});
       }
-    }, 1000);
+    }
+
+    function showFloatingUnmuteBtn() {
+      const floatingBtn = document.getElementById('unmuteFloatingBtn');
+      if (floatingBtn && standbyScreen.style.display === 'none') {
+        floatingBtn.style.display = 'inline-flex';
+      }
+    }
+
+    // Auto-unlock audio on any TV interaction (remote key, click, touch)
+    window.addEventListener('click', unlockAudio, { passive: true });
+    window.addEventListener('touchstart', unlockAudio, { passive: true });
+    window.addEventListener('keydown', unlockAudio, { passive: true });
 
     // Auto-resume if TV browser temporarily pauses
     tvVideo.addEventListener('stalled', () => {
@@ -450,6 +507,11 @@
           return;
         }
 
+        if (msg.type === 'unmute-sound') {
+          unlockAudio();
+          return;
+        }
+
         // WebRTC Offer from Presenter
         if (msg.type === 'signal-offer' && msg.offer) {
           playbackMode = 'webrtc';
@@ -488,26 +550,32 @@
       nativePc.ontrack = (event) => {
         console.log('[WebRTC LAN] Remote track received:', event.track.kind);
         
-        // Group all incoming tracks into the same MediaStream for hardware A/V lip-sync
-        if (!remoteStream) {
-          remoteStream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream();
+        tvVideo.removeAttribute('src');
+        if (event.streams && event.streams[0]) {
+          remoteStream = event.streams[0];
           tvVideo.srcObject = remoteStream;
-        }
-
-        if (!remoteStream.getTracks().includes(event.track)) {
-          remoteStream.addTrack(event.track);
+        } else {
+          if (!remoteStream) {
+            remoteStream = new MediaStream();
+            tvVideo.srcObject = remoteStream;
+          }
+          if (!remoteStream.getTracks().includes(event.track)) {
+            remoteStream.addTrack(event.track);
+          }
         }
 
         tuneMediaReceivers(nativePc);
         hideStandby();
 
-        // Attempt instant playback with full sound
         tvVideo.muted = false;
         tvVideo.volume = 1.0;
-        tvVideo.play().catch(() => {
-          // If browser policy requires user gesture to play sound, start muted silently (no screen prompt)
+        tvVideo.play().then(() => {
+          const btn = document.getElementById('unmuteFloatingBtn');
+          if (btn) btn.style.display = 'none';
+        }).catch(() => {
           tvVideo.muted = true;
           tvVideo.play().catch(() => {});
+          showFloatingUnmuteBtn();
         });
       };
 
@@ -594,15 +662,20 @@
 
         call.on('stream', (stream) => {
           hideStandby();
+          tvVideo.removeAttribute('src');
           remoteStream = stream;
           tvVideo.srcObject = remoteStream;
           tuneMediaReceivers(call.peerConnection);
 
           tvVideo.muted = false;
           tvVideo.volume = 1.0;
-          tvVideo.play().catch(() => {
+          tvVideo.play().then(() => {
+            const btn = document.getElementById('unmuteFloatingBtn');
+            if (btn) btn.style.display = 'none';
+          }).catch(() => {
             tvVideo.muted = true;
             tvVideo.play().catch(() => {});
+            showFloatingUnmuteBtn();
           });
         });
       });
@@ -634,6 +707,8 @@
         if (!data) return;
         if (data.type === 'stream-stopped') {
           showStandby('Sharing Stopped', 'Your friend stopped sharing their screen.');
+        } else if (data.type === 'unmute-sound') {
+          unlockAudio();
         } else if (data.type === 'cast-media' && data.mediaUrl) {
           playbackMode = 'media';
           currentMediaTitle = data.title || 'Video';

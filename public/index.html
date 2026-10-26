@@ -978,17 +978,20 @@
         </div>
       </div>
 
-      <!-- 2. Movie & Video Caster (Real Media Server Mode) -->
+      <!-- 2. Movie & Video Caster (Instant Real-Time Stream Mode) -->
       <div class="stage-card" id="mediaStageCard" style="display: none;">
         <div class="stage-header">
           <div>
             <span class="stage-title">Movie & Video Caster</span>
-            <span style="font-size: 0.75rem; color: #888888; margin-left: 0.5rem; font-family: 'JetBrains Mono', monospace;">Real Media Server</span>
+            <span style="font-size: 0.75rem; color: #888888; margin-left: 0.5rem; font-family: 'JetBrains Mono', monospace;">Instant Real-Time Stream</span>
           </div>
-          <span class="stage-meta">Native Bitstream • 0% CPU</span>
+          <span class="stage-meta">⚡ 0s Upload • Instant Playback</span>
         </div>
 
         <div class="stage-body" style="padding: 1.5rem; display: block; background: #070707; min-height: 480px;">
+          <!-- Real-Time Local Decoded Player Preview -->
+          <video id="fileCasterVideo" playsinline style="width: 100%; max-height: 280px; object-fit: contain; border-radius: 12px; background: #000000; margin-bottom: 1.25rem; display: none; border: 1px solid var(--border);"></video>
+
           <!-- TV Remote Control Cockpit (Active when casting) -->
           <div class="cockpit-container" id="cockpitContainer">
             <div class="cockpit-header">
@@ -996,7 +999,9 @@
                 <span class="cockpit-badge"><span class="pulse-red"></span> LIVE ON TV</span>
                 <span class="cockpit-filename" id="cockpitFileName">Ready to Cast</span>
               </div>
-              <span style="font-size: 0.75rem; color: #888888; font-family: 'JetBrains Mono', monospace;">Direct Stream</span>
+              <button class="btn-outline" style="font-size: 0.75rem; padding: 0.35rem 0.85rem;" onclick="sendUnmuteSound()" title="Wake up and unmute TV sound">
+                🔊 Unmute TV Remotely
+              </button>
             </div>
 
             <div class="timeline-wrap">
@@ -1024,7 +1029,7 @@
               </div>
 
               <div class="vol-control">
-                <button id="volMuteBtn" style="background:none; border:none; color:#ffffff; padding:0; display:flex; cursor:pointer;" onclick="toggleMute()">
+                <button id="volMuteBtn" style="background:none; border:none; color:#ffffff; padding:0; display:flex; cursor:pointer;" onclick="toggleMute()" title="TV Volume">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
                 </button>
                 <input type="range" class="custom-range" id="mediaVolumeSlider" min="0" max="1" step="0.05" value="1" oninput="setVolume(this.value)">
@@ -1033,44 +1038,33 @@
             </div>
           </div>
 
-          <!-- Drop Zone & File Upload -->
+          <!-- Instant Drop Zone (No Upload! Instant 0-second streaming) -->
           <div class="drop-zone" id="dropZone" onclick="document.getElementById('mediaFileInput').click()">
             <div class="drop-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
             </div>
-            <h4>Drop Movie or Video File Here</h4>
-            <p>Streams straight to your TV in native 4K UHD with uncompressed audio (MP4, MKV, WebM, MOV, M4V, MP3).</p>
-            <button class="btn-outline" style="font-size: 0.82rem; padding: 0.5rem 1.1rem;" onclick="event.stopPropagation(); document.getElementById('mediaFileInput').click();">
-              Choose File from Computer
+            <h4>Drop Any Movie or Video Here</h4>
+            <p>⚡ <strong>Zero upload time! Starts playing on TV in 0.1s.</strong><br>Direct real-time stream with sound always on (MP4, MKV, WebM, MOV, M4V, MP3).</p>
+            <button class="btn-black" style="font-size: 0.85rem; padding: 0.6rem 1.4rem;" onclick="event.stopPropagation(); document.getElementById('mediaFileInput').click();">
+              Select Video File from PC
             </button>
             <input type="file" id="mediaFileInput" accept="video/*,audio/*,.mkv,.mp4,.webm,.mov,.m4v,.mp3,.wav,.flac,.ogg" style="display:none">
           </div>
 
-          <!-- Upload Progress -->
-          <div class="upload-progress-box" id="uploadProgressBox">
-            <div style="display: flex; justify-content: space-between; font-size: 0.82rem;">
-              <span style="font-weight: 600;" id="uploadFileName">Uploading file...</span>
-              <span style="color: #aaaaaa;" id="uploadStatusText">0%</span>
-            </div>
-            <div class="progress-bar-bg">
-              <div class="progress-bar-fill" id="progressBarFill"></div>
-            </div>
-          </div>
-
-          <!-- Server Media Library -->
+          <!-- Server Media Library (Optional) -->
           <div class="library-card">
             <div class="library-header">
               <div class="library-title">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
-                <span>Server Media Library</span>
+                <span>Files in Server media/ folder</span>
               </div>
               <button class="btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;" onclick="loadMediaList()">
                 ↻ Refresh
               </button>
             </div>
 
-            <div id="mediaListEmpty" style="text-align: center; padding: 2rem 1rem; color: var(--text-dim); font-size: 0.85rem;">
-              No movies or media uploaded yet. Drop a movie above to stream it in highest quality!
+            <div id="mediaListEmpty" style="text-align: center; padding: 1.5rem 1rem; color: var(--text-dim); font-size: 0.85rem;">
+              Drop a movie above to stream instantly in real time!
             </div>
 
             <ul class="media-list" id="mediaList" style="display: none;"></ul>
@@ -1080,7 +1074,7 @@
         <div class="stage-footer">
           <div class="quality-indicator-row" style="margin: 0;">
             <span class="quality-pulse"></span>
-            <span>⚡ Web Video Caster Engine • RFC 7233 HTTP 206 Partial Content • Instant Range Seeking</span>
+            <span>⚡ Instant Real-Time Stream • Hardware Decode • 0s Upload • Sound Always On</span>
           </div>
         </div>
       </div>
@@ -1102,6 +1096,11 @@
         <div class="url-box">
           <span class="url-string" id="tvDirectUrl">http://.../tv</span>
           <button class="copy-pill" onclick="copyDirectUrl()">Copy</button>
+        </div>
+
+        <div style="margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 0.8rem; color: var(--text-muted);">TV Sound Check</span>
+          <button class="copy-pill" style="padding: 0.4rem 0.85rem;" onclick="sendUnmuteSound()">🔊 Unmute TV</button>
         </div>
       </div>
 
@@ -1208,13 +1207,6 @@
         if (videoCaps && videoCaps.codecs) {
           const h264 = videoCaps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/h264');
           const others = videoCaps.codecs.filter(c => c.mimeType.toLowerCase() !== 'video/h264');
-          h264.sort((a, b) => {
-            const aParams = (a.sdpFmtpLine || '').toLowerCase();
-            const bParams = (b.sdpFmtpLine || '').toLowerCase();
-            const aScore = (aParams.includes('42e01f') ? 2 : 0) + (aParams.includes('packetization-mode=1') ? 1 : 0);
-            const bScore = (bParams.includes('42e01f') ? 2 : 0) + (bParams.includes('packetization-mode=1') ? 1 : 0);
-            return bScore - aScore;
-          });
           const videoTransceiver = pc.getTransceivers().find(t => t.sender && t.sender.track && t.sender.track.kind === 'video');
           if (videoTransceiver && videoTransceiver.setCodecPreferences) {
             try { videoTransceiver.setCodecPreferences([...h264, ...others]); } catch (e) {}
@@ -1823,6 +1815,88 @@
         .catch(err => console.warn('Could not load media list:', err));
     }
 
+    let localFilePlayer = null;
+
+    function sendUnmuteSound() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'unmute-sound' }));
+      }
+      dataConnections.forEach(conn => {
+        if (conn.open) conn.send({ type: 'unmute-sound' });
+      });
+    }
+
+    async function startRealtimeFileCast(file) {
+      if (!file) return;
+      console.log('[File Caster] Starting instant real-time stream for:', file.name);
+
+      if (localStream) {
+        localStream.getTracks().forEach(t => t.stop());
+        localStream = null;
+      }
+
+      currentlyPlayingFile = file.name;
+      const fileUrl = URL.createObjectURL(file);
+
+      localFilePlayer = document.getElementById('fileCasterVideo');
+      localFilePlayer.src = fileUrl;
+      localFilePlayer.style.display = 'block';
+      localFilePlayer.volume = 1.0;
+      localFilePlayer.muted = false;
+
+      try {
+        await localFilePlayer.play();
+      } catch (err) {
+        console.warn('Playback autoplay warning:', err);
+      }
+
+      let capturedStream = null;
+      if (typeof localFilePlayer.captureStream === 'function') {
+        capturedStream = localFilePlayer.captureStream();
+      } else if (typeof localFilePlayer.mozCaptureStream === 'function') {
+        capturedStream = localFilePlayer.mozCaptureStream();
+      }
+
+      if (!capturedStream) {
+        alert('Your browser does not support video stream capture. Please use Chrome or Edge.');
+        return;
+      }
+
+      localStream = capturedStream;
+
+      const vTrack = localStream.getVideoTracks()[0];
+      if (vTrack && 'contentHint' in vTrack) {
+        vTrack.contentHint = 'motion';
+      }
+
+      callAllViewers();
+
+      const cockpit = document.getElementById('cockpitContainer');
+      cockpit.classList.add('active');
+      document.getElementById('cockpitFileName').innerText = file.name;
+      document.getElementById('cockpitFileName').title = file.name;
+      document.getElementById('currentTimeDisplay').innerText = '00:00';
+      document.getElementById('totalDurationDisplay').innerText = formatTime(localFilePlayer.duration || 0);
+      document.getElementById('mediaTimeline').value = 0;
+      updatePlayPauseBtn(true);
+
+      // Instantly wake up TV audio
+      sendUnmuteSound();
+
+      localFilePlayer.ontimeupdate = () => {
+        if (!isUserScrubbing && localFilePlayer.duration) {
+          const pct = (localFilePlayer.currentTime / localFilePlayer.duration) * 100;
+          document.getElementById('mediaTimeline').value = pct;
+          document.getElementById('currentTimeDisplay').innerText = formatTime(localFilePlayer.currentTime);
+          document.getElementById('totalDurationDisplay').innerText = formatTime(localFilePlayer.duration);
+        }
+      };
+
+      localFilePlayer.onended = () => {
+        stopCastingMedia();
+      };
+    }
+
     function castMediaFile(relativeUrl, fileName) {
       if (localStream) {
         stopScreenShare();
@@ -1852,10 +1926,25 @@
       document.getElementById('totalDurationDisplay').innerText = '--:--';
       document.getElementById('mediaTimeline').value = 0;
       updatePlayPauseBtn(true);
+      sendUnmuteSound();
       loadMediaList();
     }
 
     function stopCastingMedia() {
+      if (localFilePlayer) {
+        try {
+          localFilePlayer.pause();
+          localFilePlayer.removeAttribute('src');
+          localFilePlayer.load();
+        } catch (e) {}
+        localFilePlayer.style.display = 'none';
+      }
+
+      if (localStream) {
+        localStream.getTracks().forEach(t => t.stop());
+        localStream = null;
+      }
+
       const msg = { type: 'switch-to-screen' };
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify(msg));
@@ -1893,21 +1982,36 @@
     }
 
     function togglePlayPause() {
-      if (isCastingPlaying) {
-        sendMediaControl({ action: 'pause' });
-        updatePlayPauseBtn(false);
+      if (localFilePlayer && localFilePlayer.src && localFilePlayer.style.display !== 'none') {
+        if (localFilePlayer.paused) {
+          localFilePlayer.play();
+          updatePlayPauseBtn(true);
+        } else {
+          localFilePlayer.pause();
+          updatePlayPauseBtn(false);
+        }
       } else {
-        sendMediaControl({ action: 'play' });
-        updatePlayPauseBtn(true);
+        if (isCastingPlaying) {
+          sendMediaControl({ action: 'pause' });
+          updatePlayPauseBtn(false);
+        } else {
+          sendMediaControl({ action: 'play' });
+          updatePlayPauseBtn(true);
+        }
       }
     }
 
     function jumpTime(delta) {
-      sendMediaControl({ action: 'jump', delta });
+      if (localFilePlayer && localFilePlayer.src && localFilePlayer.style.display !== 'none') {
+        localFilePlayer.currentTime = Math.max(0, Math.min(localFilePlayer.duration || 0, localFilePlayer.currentTime + delta));
+      } else {
+        sendMediaControl({ action: 'jump', delta });
+      }
     }
 
     function setVolume(level) {
       const lvl = parseFloat(level);
+      if (localFilePlayer) localFilePlayer.volume = lvl;
       sendMediaControl({ action: 'volume', level: lvl });
       document.getElementById('volLevelDisplay').innerText = `${Math.round(lvl * 100)}%`;
     }
@@ -1945,52 +2049,6 @@
       }
     }
 
-    function uploadMediaFile(file) {
-      if (!file) return;
-      const progressBox = document.getElementById('uploadProgressBox');
-      const fill = document.getElementById('progressBarFill');
-      const text = document.getElementById('uploadStatusText');
-      const nameLabel = document.getElementById('uploadFileName');
-
-      progressBox.style.display = 'block';
-      nameLabel.innerText = file.name;
-      fill.style.width = '0%';
-      text.innerText = 'Starting upload...';
-
-      const startTime = Date.now();
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', `/api/upload?name=${encodeURIComponent(file.name)}`, true);
-
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
-          const pct = Math.round((e.loaded / e.total) * 100);
-          fill.style.width = pct + '%';
-          const elapsedSec = (Date.now() - startTime) / 1000;
-          const speedMBs = elapsedSec > 0 ? (e.loaded / (1024 * 1024) / elapsedSec).toFixed(1) : '0';
-          text.innerText = `${pct}% (${formatBytes(e.loaded)} / ${formatBytes(e.total)} • ${speedMBs} MB/s)`;
-        }
-      };
-
-      xhr.onload = () => {
-        if (xhr.status === 200) {
-          fill.style.width = '100%';
-          text.innerText = 'Upload complete! ✨ Ready to cast in 4K';
-          setTimeout(() => {
-            progressBox.style.display = 'none';
-          }, 3000);
-          loadMediaList();
-        } else {
-          text.innerText = 'Upload failed. Please try again.';
-        }
-      };
-
-      xhr.onerror = () => {
-        text.innerText = 'Network error during upload.';
-      };
-
-      xhr.send(file);
-    }
-
     function deleteMediaFile(filename) {
       if (!confirm(`Delete "${filename}" from server library?`)) return;
       fetch(`/api/media-delete?name=${encodeURIComponent(filename)}`, { method: 'POST' })
@@ -2012,7 +2070,10 @@
 
         timeline.addEventListener('input', () => {
           isUserScrubbing = true;
-          if (currentCastingDuration > 0) {
+          if (localFilePlayer && localFilePlayer.duration) {
+            const targetTime = (timeline.value / 100) * localFilePlayer.duration;
+            document.getElementById('currentTimeDisplay').innerText = formatTime(targetTime);
+          } else if (currentCastingDuration > 0) {
             const targetTime = (timeline.value / 100) * currentCastingDuration;
             document.getElementById('currentTimeDisplay').innerText = formatTime(targetTime);
           }
@@ -2020,7 +2081,9 @@
 
         timeline.addEventListener('change', () => {
           isUserScrubbing = false;
-          if (currentCastingDuration > 0) {
+          if (localFilePlayer && localFilePlayer.duration) {
+            localFilePlayer.currentTime = (timeline.value / 100) * localFilePlayer.duration;
+          } else if (currentCastingDuration > 0) {
             const targetTime = (timeline.value / 100) * currentCastingDuration;
             sendMediaControl({ action: 'seek', time: targetTime });
           }
@@ -2030,7 +2093,7 @@
         window.addEventListener('touchend', () => { isUserScrubbing = false; });
       }
 
-      // Drag & Drop
+      // Drag & Drop Instant Real-Time Casting (No Uploading!)
       const dropZone = document.getElementById('dropZone');
       const fileInput = document.getElementById('mediaFileInput');
 
@@ -2054,7 +2117,7 @@
         dropZone.addEventListener('drop', (e) => {
           const files = e.dataTransfer.files;
           if (files && files.length > 0) {
-            uploadMediaFile(files[0]);
+            startRealtimeFileCast(files[0]);
           }
         });
       }
@@ -2062,7 +2125,7 @@
       if (fileInput) {
         fileInput.addEventListener('change', () => {
           if (fileInput.files && fileInput.files.length > 0) {
-            uploadMediaFile(fileInput.files[0]);
+            startRealtimeFileCast(fileInput.files[0]);
           }
         });
       }
