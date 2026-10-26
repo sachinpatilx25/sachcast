@@ -443,6 +443,449 @@
       border-radius: 12px;
       width: fit-content;
     }
+
+    /* Dual Mode Nav & Caster Cockpit */
+    .main-left {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      min-width: 0;
+    }
+
+    .mode-nav {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #0d0d0d;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 0.4rem;
+    }
+
+    .mode-tab {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.65rem;
+      padding: 0.8rem 1.25rem;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--text-muted);
+      border: none;
+      cursor: pointer;
+      font-size: 0.92rem;
+      font-weight: 600;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .mode-tab:hover {
+      color: #ffffff;
+      background: #181818;
+    }
+
+    .mode-tab.active {
+      background: #ffffff;
+      color: #000000;
+      box-shadow: 0 4px 14px rgba(255, 255, 255, 0.12);
+    }
+
+    .mode-tab .pro-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      background: #000000;
+      color: #ffffff;
+      padding: 0.18rem 0.5rem;
+      border-radius: 5px;
+      letter-spacing: 0.05em;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .mode-tab:not(.active) .pro-badge {
+      background: #222222;
+      color: #aaaaaa;
+    }
+
+    /* Media Cockpit */
+    .cockpit-container {
+      background: #111111;
+      border: 1px solid #2e2e2e;
+      border-radius: 14px;
+      padding: 1.4rem;
+      margin-bottom: 1.4rem;
+      display: none;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+
+    .cockpit-container.active {
+      display: block;
+      animation: fadeIn 0.25s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .cockpit-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+
+    .cockpit-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .cockpit-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #ffffff;
+      background: #1c1c1c;
+      border: 1px solid #333333;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-shrink: 0;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .cockpit-badge .pulse-red {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #ff4444;
+      box-shadow: 0 0 8px #ff4444;
+      animation: pulseAnim 1.5s infinite;
+    }
+
+    @keyframes pulseAnim {
+      0% { opacity: 1; }
+      50% { opacity: 0.4; }
+      100% { opacity: 1; }
+    }
+
+    .cockpit-filename {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #ffffff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .timeline-wrap {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .time-mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: #aaaaaa;
+      white-space: nowrap;
+    }
+
+    .slider-track {
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+
+    .custom-range {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #252525;
+      outline: none;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .custom-range:hover {
+      background: #333333;
+    }
+
+    .custom-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #ffffff;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+      transition: transform 0.1s ease;
+    }
+
+    .custom-range::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+    }
+
+    .cockpit-buttons {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .btn-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #1a1a1a;
+      border: 1px solid #333333;
+      color: #ffffff;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      padding: 0;
+      transition: all 0.15s ease;
+    }
+
+    .btn-circle:hover {
+      background: #ffffff;
+      color: #000000;
+      border-color: #ffffff;
+    }
+
+    .btn-circle.main-play {
+      width: 50px;
+      height: 50px;
+      background: #ffffff;
+      color: #000000;
+      border-color: #ffffff;
+    }
+
+    .btn-circle.main-play:hover {
+      background: #e0e0e0;
+      transform: scale(1.05);
+    }
+
+    .vol-control {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      background: #181818;
+      border: 1px solid #2a2a2a;
+      padding: 0.45rem 0.85rem;
+      border-radius: 9999px;
+    }
+
+    .vol-control .custom-range {
+      width: 85px;
+    }
+
+    /* Drop Zone */
+    .drop-zone {
+      border: 2px dashed #2a2a2a;
+      border-radius: 14px;
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      background: #080808;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: 1.4rem;
+    }
+
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: #ffffff;
+      background: #111111;
+    }
+
+    .drop-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      background: #141414;
+      border: 1px solid #2a2a2a;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 1rem auto;
+      color: #ffffff;
+    }
+
+    .drop-zone h4 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+      letter-spacing: -0.01em;
+    }
+
+    .drop-zone p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 1.25rem;
+      line-height: 1.5;
+    }
+
+    .upload-progress-box {
+      display: none;
+      background: #121212;
+      border: 1px solid #282828;
+      border-radius: 12px;
+      padding: 1.1rem 1.25rem;
+      margin-bottom: 1.4rem;
+    }
+
+    .progress-bar-bg {
+      height: 7px;
+      border-radius: 4px;
+      background: #222222;
+      overflow: hidden;
+      margin: 0.6rem 0;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: #ffffff;
+      border-radius: 4px;
+      transition: width 0.15s ease;
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
+    }
+
+    /* Media List */
+    .library-card {
+      background: #0a0a0a;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.25rem;
+    }
+
+    .library-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .library-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .media-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .media-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      background: #000000;
+      border: 1px solid var(--border);
+      padding: 0.85rem 1.1rem;
+      border-radius: 10px;
+      transition: border-color 0.15s ease;
+    }
+
+    .media-item:hover {
+      border-color: #383838;
+    }
+
+    .media-item.currently-casting {
+      border-color: #ffffff;
+      background: #0d0d0d;
+    }
+
+    .media-info {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .media-file-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      background: #141414;
+      border: 1px solid #282828;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      font-size: 1.1rem;
+    }
+
+    .media-name {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #ffffff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .media-meta {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      margin-top: 0.2rem;
+    }
+
+    .media-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .btn-cast-sm {
+      background: #ffffff;
+      color: #000000;
+      font-size: 0.8rem;
+      padding: 0.45rem 0.9rem;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    .btn-cast-sm:hover {
+      background: #e2e2e2;
+    }
+
+    .btn-icon-del {
+      background: transparent;
+      border: 1px solid #2b2b2b;
+      color: #777777;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+    }
+
+    .btn-icon-del:hover {
+      color: #ff5555;
+      border-color: #ff5555;
+      background: rgba(255, 85, 85, 0.1);
+    }
   </style>
 </head>
 <body>
@@ -467,56 +910,179 @@
   </header>
 
   <main>
-    <div class="stage-card">
-      <div class="stage-header">
-        <span class="stage-title">Your Screen</span>
-        <span class="stage-meta" id="tvCountHeader">0 Friends Watching</span>
+    <div class="main-left">
+      <div class="mode-nav">
+        <button class="mode-tab active" id="tabScreenShare" onclick="switchMode('screen')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          <span>Screen Share</span>
+          <span class="pro-badge">60 FPS</span>
+        </button>
+        <button class="mode-tab" id="tabMediaServer" onclick="switchMode('media')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          <span>Movie & Video Caster</span>
+          <span class="pro-badge">4K UHD</span>
+        </button>
       </div>
 
-      <div class="stage-body">
-        <div class="empty-state" id="emptyState">
-          <div class="empty-icon">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-              <line x1="8" y1="21" x2="16" y2="21"></line>
-              <line x1="12" y1="17" x2="12" y2="21"></line>
-            </svg>
-          </div>
-          <h3>Share Screen with Friends</h3>
-          <p>Stream your games, videos, or desktop straight to any TV or browser with smooth 60 FPS and zero delay.</p>
-          
-          <div class="quality-indicator-row">
-            <span class="quality-pulse"></span>
-            <span>⚡ Ultra Smooth 60 FPS • Real-Time Audio & Video</span>
+      <!-- 1. Screen Mirroring Mode -->
+      <div class="stage-card" id="screenStageCard">
+        <div class="stage-header">
+          <span class="stage-title">Your Screen</span>
+          <span class="stage-meta" id="tvCountHeader">0 Friends Watching</span>
+        </div>
+
+        <div class="stage-body">
+          <div class="empty-state" id="emptyState">
+            <div class="empty-icon">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+            </div>
+            <h3>Share Screen with Friends</h3>
+            <p>Stream your games, videos, or desktop straight to any TV or browser with smooth 60 FPS and zero delay.</p>
+            
+            <div class="quality-indicator-row">
+              <span class="quality-pulse"></span>
+              <span>⚡ Ultra Smooth 60 FPS • Real-Time Audio & Video</span>
+            </div>
+
+            <div>
+              <button class="btn-black" id="primaryShareBtn" onclick="startScreenShare()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polygon points="10 8 16 12 10 16 10 8"></polygon>
+                </svg>
+                Start Sharing
+              </button>
+            </div>
           </div>
 
+          <video id="localVideo" autoplay playsinline muted style="display: none;"></video>
+        </div>
+
+        <div class="stage-footer">
           <div>
-            <button class="btn-black" id="primaryShareBtn" onclick="startScreenShare()">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polygon points="10 8 16 12 10 16 10 8"></polygon>
-              </svg>
+            <button id="startBtn" class="btn-black" onclick="startScreenShare()">
               Start Sharing
             </button>
+            <button id="stopBtn" class="btn-stop" style="display: none;" onclick="stopScreenShare()">
+              Stop Sharing
+            </button>
+          </div>
+
+          <button class="btn-outline" onclick="sendFlashPing()">
+            Ping Friends 👋
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. Movie & Video Caster (Real Media Server Mode) -->
+      <div class="stage-card" id="mediaStageCard" style="display: none;">
+        <div class="stage-header">
+          <div>
+            <span class="stage-title">Movie & Video Caster</span>
+            <span style="font-size: 0.75rem; color: #888888; margin-left: 0.5rem; font-family: 'JetBrains Mono', monospace;">Real Media Server</span>
+          </div>
+          <span class="stage-meta">Native Bitstream • 0% CPU</span>
+        </div>
+
+        <div class="stage-body" style="padding: 1.5rem; display: block; background: #070707; min-height: 480px;">
+          <!-- TV Remote Control Cockpit (Active when casting) -->
+          <div class="cockpit-container" id="cockpitContainer">
+            <div class="cockpit-header">
+              <div class="cockpit-title-wrap">
+                <span class="cockpit-badge"><span class="pulse-red"></span> LIVE ON TV</span>
+                <span class="cockpit-filename" id="cockpitFileName">Ready to Cast</span>
+              </div>
+              <span style="font-size: 0.75rem; color: #888888; font-family: 'JetBrains Mono', monospace;">Direct Stream</span>
+            </div>
+
+            <div class="timeline-wrap">
+              <span class="time-mono" id="currentTimeDisplay">00:00</span>
+              <div class="slider-track">
+                <input type="range" class="custom-range" id="mediaTimeline" min="0" max="100" value="0" step="0.1">
+              </div>
+              <span class="time-mono" id="totalDurationDisplay">00:00</span>
+            </div>
+
+            <div class="cockpit-buttons">
+              <div class="btn-group">
+                <button class="btn-circle" title="Rewind 10 seconds" onclick="jumpTime(-10)">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 19l-9-7 9-7v14z"></path><path d="M22 19l-9-7 9-7v14z"></path></svg>
+                </button>
+                <button class="btn-circle main-play" id="cockpitPlayBtn" title="Play / Pause" onclick="togglePlayPause()">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                </button>
+                <button class="btn-circle" title="Forward 10 seconds" onclick="jumpTime(10)">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 19l9-7-9-7v14z"></path><path d="M2 19l9-7-9-7v14z"></path></svg>
+                </button>
+                <button class="btn-stop" style="padding: 0.5rem 1rem; font-size: 0.8rem; margin-left: 0.5rem;" onclick="stopCastingMedia()">
+                  ⏹ Stop Casting
+                </button>
+              </div>
+
+              <div class="vol-control">
+                <button id="volMuteBtn" style="background:none; border:none; color:#ffffff; padding:0; display:flex; cursor:pointer;" onclick="toggleMute()">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                </button>
+                <input type="range" class="custom-range" id="mediaVolumeSlider" min="0" max="1" step="0.05" value="1" oninput="setVolume(this.value)">
+                <span style="font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; color: #aaaaaa; min-width: 32px;" id="volLevelDisplay">100%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Drop Zone & File Upload -->
+          <div class="drop-zone" id="dropZone" onclick="document.getElementById('mediaFileInput').click()">
+            <div class="drop-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            </div>
+            <h4>Drop Movie or Video File Here</h4>
+            <p>Streams straight to your TV in native 4K UHD with uncompressed audio (MP4, MKV, WebM, MOV, M4V, MP3).</p>
+            <button class="btn-outline" style="font-size: 0.82rem; padding: 0.5rem 1.1rem;" onclick="event.stopPropagation(); document.getElementById('mediaFileInput').click();">
+              Choose File from Computer
+            </button>
+            <input type="file" id="mediaFileInput" accept="video/*,audio/*,.mkv,.mp4,.webm,.mov,.m4v,.mp3,.wav,.flac,.ogg" style="display:none">
+          </div>
+
+          <!-- Upload Progress -->
+          <div class="upload-progress-box" id="uploadProgressBox">
+            <div style="display: flex; justify-content: space-between; font-size: 0.82rem;">
+              <span style="font-weight: 600;" id="uploadFileName">Uploading file...</span>
+              <span style="color: #aaaaaa;" id="uploadStatusText">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="progressBarFill"></div>
+            </div>
+          </div>
+
+          <!-- Server Media Library -->
+          <div class="library-card">
+            <div class="library-header">
+              <div class="library-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+                <span>Server Media Library</span>
+              </div>
+              <button class="btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;" onclick="loadMediaList()">
+                ↻ Refresh
+              </button>
+            </div>
+
+            <div id="mediaListEmpty" style="text-align: center; padding: 2rem 1rem; color: var(--text-dim); font-size: 0.85rem;">
+              No movies or media uploaded yet. Drop a movie above to stream it in highest quality!
+            </div>
+
+            <ul class="media-list" id="mediaList" style="display: none;"></ul>
           </div>
         </div>
 
-        <video id="localVideo" autoplay playsinline muted style="display: none;"></video>
-      </div>
-
-      <div class="stage-footer">
-        <div>
-          <button id="startBtn" class="btn-black" onclick="startScreenShare()">
-            Start Sharing
-          </button>
-          <button id="stopBtn" class="btn-stop" style="display: none;" onclick="stopScreenShare()">
-            Stop Sharing
-          </button>
+        <div class="stage-footer">
+          <div class="quality-indicator-row" style="margin: 0;">
+            <span class="quality-pulse"></span>
+            <span>⚡ Web Video Caster Engine • RFC 7233 HTTP 206 Partial Content • Instant Range Seeking</span>
+          </div>
         </div>
-
-        <button class="btn-outline" onclick="sendFlashPing()">
-          Ping Friends 👋
-        </button>
       </div>
     </div>
 
@@ -753,6 +1319,11 @@
       try {
         const msg = JSON.parse(raw);
 
+        if (msg.type === 'media-status') {
+          handleMediaStatus(msg);
+          return;
+        }
+
         if (msg.type === 'room-created') {
           if (msg.viewers) {
             msg.viewers.forEach(v => {
@@ -902,7 +1473,8 @@
         dataConnections.set(conn.peer, conn);
 
         conn.on('data', (data) => {
-          if (data && data.type === 'hello') {
+          if (!data) return;
+          if (data.type === 'hello') {
             knownViewers.set(conn.peer, {
               id: conn.peer,
               deviceName: data.deviceName || 'Smart TV'
@@ -911,6 +1483,8 @@
             if (localStream) {
               callViewerPeerJS(conn.peer);
             }
+          } else if (data.type === 'media-status') {
+            handleMediaStatus(data);
           }
         });
 
@@ -1036,6 +1610,9 @@
     // --- Screen Sharing (Robust Capture with Audio Fallback) ---
     async function startScreenShare() {
       try {
+        if (currentlyPlayingFile) {
+          stopCastingMedia();
+        }
         let stream = null;
         try {
           // 1. Pristine 1080p 60fps video + Zero-DSP direct 48kHz stereo system audio
@@ -1153,6 +1730,346 @@
       });
       alert(sent > 0 ? `Sent a wave to your friends' screens! 👋` : 'No friends are watching yet. Share the link!');
     }
+
+    // --- Dual Mode & Media Caster State ---
+    let currentMode = 'screen';
+    let currentlyPlayingFile = null;
+    let currentCastingDuration = 0;
+    let isCastingPlaying = false;
+    let isUserScrubbing = false;
+
+    function switchMode(mode) {
+      currentMode = mode;
+      const tabScreen = document.getElementById('tabScreenShare');
+      const tabMedia = document.getElementById('tabMediaServer');
+      const cardScreen = document.getElementById('screenStageCard');
+      const cardMedia = document.getElementById('mediaStageCard');
+
+      if (mode === 'screen') {
+        tabScreen.classList.add('active');
+        tabMedia.classList.remove('active');
+        cardScreen.style.display = 'flex';
+        cardMedia.style.display = 'none';
+      } else {
+        tabScreen.classList.remove('active');
+        tabMedia.classList.add('active');
+        cardScreen.style.display = 'none';
+        cardMedia.style.display = 'flex';
+        loadMediaList();
+      }
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes || bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function formatTime(seconds) {
+      if (isNaN(seconds) || seconds < 0) return '00:00';
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      const s = Math.floor(seconds % 60);
+      if (h > 0) {
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+      }
+      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function loadMediaList() {
+      fetch('/api/media-list')
+        .then(res => res.json())
+        .then(data => {
+          const listElem = document.getElementById('mediaList');
+          const emptyElem = document.getElementById('mediaListEmpty');
+          if (!listElem || !emptyElem) return;
+          listElem.innerHTML = '';
+          if (!data.files || data.files.length === 0) {
+            emptyElem.style.display = 'block';
+            listElem.style.display = 'none';
+            return;
+          }
+          emptyElem.style.display = 'none';
+          listElem.style.display = 'flex';
+
+          data.files.forEach(f => {
+            const li = document.createElement('li');
+            li.className = 'media-item' + (currentlyPlayingFile === f.name ? ' currently-casting' : '');
+            const isAudio = ['.mp3', '.wav', '.flac', '.aac', '.ogg'].includes(f.ext);
+            const icon = isAudio ? '🎵' : '🎬';
+            const safeName = f.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            li.innerHTML = `
+              <div class="media-info">
+                <div class="media-file-icon">${icon}</div>
+                <div style="min-width:0;">
+                  <div class="media-name" title="${f.name}">${f.name}</div>
+                  <div class="media-meta">${f.sizeFormatted} • Direct 4K Stream</div>
+                </div>
+              </div>
+              <div class="media-actions">
+                <button class="btn-cast-sm" onclick="castMediaFile('${f.url}', '${safeName}')">
+                  ▶ Cast to TV
+                </button>
+                <button class="btn-icon-del" title="Delete" onclick="deleteMediaFile('${safeName}')">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              </div>
+            `;
+            listElem.appendChild(li);
+          });
+        })
+        .catch(err => console.warn('Could not load media list:', err));
+    }
+
+    function castMediaFile(relativeUrl, fileName) {
+      if (localStream) {
+        stopScreenShare();
+      }
+
+      currentlyPlayingFile = fileName;
+      const fullUrl = window.location.origin + relativeUrl;
+
+      const msg = {
+        type: 'cast-media',
+        mediaUrl: fullUrl,
+        title: fileName,
+        startTime: 0
+      };
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(msg));
+      }
+      dataConnections.forEach(conn => {
+        if (conn.open) conn.send(msg);
+      });
+
+      document.getElementById('cockpitContainer').classList.add('active');
+      document.getElementById('cockpitFileName').innerText = fileName;
+      document.getElementById('cockpitFileName').title = fileName;
+      document.getElementById('currentTimeDisplay').innerText = '00:00';
+      document.getElementById('totalDurationDisplay').innerText = '--:--';
+      document.getElementById('mediaTimeline').value = 0;
+      updatePlayPauseBtn(true);
+      loadMediaList();
+    }
+
+    function stopCastingMedia() {
+      const msg = { type: 'switch-to-screen' };
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(msg));
+      }
+      dataConnections.forEach(conn => {
+        if (conn.open) conn.send(msg);
+      });
+
+      document.getElementById('cockpitContainer').classList.remove('active');
+      currentlyPlayingFile = null;
+      loadMediaList();
+    }
+
+    function sendMediaControl(cmd) {
+      const payload = { type: 'media-control', ...cmd };
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(payload));
+      }
+      dataConnections.forEach(conn => {
+        if (conn.open) conn.send(payload);
+      });
+    }
+
+    function updatePlayPauseBtn(isPlaying) {
+      isCastingPlaying = isPlaying;
+      const btn = document.getElementById('cockpitPlayBtn');
+      if (!btn) return;
+      if (isPlaying) {
+        btn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>`;
+        btn.title = "Pause";
+      } else {
+        btn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`;
+        btn.title = "Play";
+      }
+    }
+
+    function togglePlayPause() {
+      if (isCastingPlaying) {
+        sendMediaControl({ action: 'pause' });
+        updatePlayPauseBtn(false);
+      } else {
+        sendMediaControl({ action: 'play' });
+        updatePlayPauseBtn(true);
+      }
+    }
+
+    function jumpTime(delta) {
+      sendMediaControl({ action: 'jump', delta });
+    }
+
+    function setVolume(level) {
+      const lvl = parseFloat(level);
+      sendMediaControl({ action: 'volume', level: lvl });
+      document.getElementById('volLevelDisplay').innerText = `${Math.round(lvl * 100)}%`;
+    }
+
+    let isMuted = false;
+    function toggleMute() {
+      isMuted = !isMuted;
+      const slider = document.getElementById('mediaVolumeSlider');
+      if (isMuted) {
+        slider.dataset.prevVol = slider.value;
+        slider.value = 0;
+        setVolume(0);
+        document.getElementById('volMuteBtn').innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"></line><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon></svg>`;
+      } else {
+        const prev = slider.dataset.prevVol || 1;
+        slider.value = prev;
+        setVolume(prev);
+        document.getElementById('volMuteBtn').innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
+      }
+    }
+
+    function handleMediaStatus(msg) {
+      currentCastingDuration = msg.duration || 0;
+      if (!isUserScrubbing) {
+        const pct = msg.duration > 0 ? (msg.currentTime / msg.duration) * 100 : 0;
+        document.getElementById('mediaTimeline').value = pct;
+        document.getElementById('currentTimeDisplay').innerText = formatTime(msg.currentTime);
+        document.getElementById('totalDurationDisplay').innerText = formatTime(msg.duration);
+      }
+      updatePlayPauseBtn(!msg.paused);
+      if (msg.title) {
+        document.getElementById('cockpitFileName').innerText = msg.title;
+        document.getElementById('cockpitContainer').classList.add('active');
+        currentlyPlayingFile = msg.title;
+      }
+    }
+
+    function uploadMediaFile(file) {
+      if (!file) return;
+      const progressBox = document.getElementById('uploadProgressBox');
+      const fill = document.getElementById('progressBarFill');
+      const text = document.getElementById('uploadStatusText');
+      const nameLabel = document.getElementById('uploadFileName');
+
+      progressBox.style.display = 'block';
+      nameLabel.innerText = file.name;
+      fill.style.width = '0%';
+      text.innerText = 'Starting upload...';
+
+      const startTime = Date.now();
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `/api/upload?name=${encodeURIComponent(file.name)}`, true);
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          fill.style.width = pct + '%';
+          const elapsedSec = (Date.now() - startTime) / 1000;
+          const speedMBs = elapsedSec > 0 ? (e.loaded / (1024 * 1024) / elapsedSec).toFixed(1) : '0';
+          text.innerText = `${pct}% (${formatBytes(e.loaded)} / ${formatBytes(e.total)} • ${speedMBs} MB/s)`;
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          fill.style.width = '100%';
+          text.innerText = 'Upload complete! ✨ Ready to cast in 4K';
+          setTimeout(() => {
+            progressBox.style.display = 'none';
+          }, 3000);
+          loadMediaList();
+        } else {
+          text.innerText = 'Upload failed. Please try again.';
+        }
+      };
+
+      xhr.onerror = () => {
+        text.innerText = 'Network error during upload.';
+      };
+
+      xhr.send(file);
+    }
+
+    function deleteMediaFile(filename) {
+      if (!confirm(`Delete "${filename}" from server library?`)) return;
+      fetch(`/api/media-delete?name=${encodeURIComponent(filename)}`, { method: 'POST' })
+        .then(res => res.json())
+        .then(() => {
+          if (currentlyPlayingFile === filename) {
+            stopCastingMedia();
+          }
+          loadMediaList();
+        })
+        .catch(() => alert('Could not delete file'));
+    }
+
+    function setupMediaControls() {
+      const timeline = document.getElementById('mediaTimeline');
+      if (timeline) {
+        timeline.addEventListener('mousedown', () => { isUserScrubbing = true; });
+        timeline.addEventListener('touchstart', () => { isUserScrubbing = true; }, { passive: true });
+
+        timeline.addEventListener('input', () => {
+          isUserScrubbing = true;
+          if (currentCastingDuration > 0) {
+            const targetTime = (timeline.value / 100) * currentCastingDuration;
+            document.getElementById('currentTimeDisplay').innerText = formatTime(targetTime);
+          }
+        });
+
+        timeline.addEventListener('change', () => {
+          isUserScrubbing = false;
+          if (currentCastingDuration > 0) {
+            const targetTime = (timeline.value / 100) * currentCastingDuration;
+            sendMediaControl({ action: 'seek', time: targetTime });
+          }
+        });
+
+        window.addEventListener('mouseup', () => { isUserScrubbing = false; });
+        window.addEventListener('touchend', () => { isUserScrubbing = false; });
+      }
+
+      // Drag & Drop
+      const dropZone = document.getElementById('dropZone');
+      const fileInput = document.getElementById('mediaFileInput');
+
+      if (dropZone) {
+        ['dragenter', 'dragover'].forEach(name => {
+          dropZone.addEventListener(name, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.add('drag-over');
+          });
+        });
+
+        ['dragleave', 'drop'].forEach(name => {
+          dropZone.addEventListener(name, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('drag-over');
+          });
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+          const files = e.dataTransfer.files;
+          if (files && files.length > 0) {
+            uploadMediaFile(files[0]);
+          }
+        });
+      }
+
+      if (fileInput) {
+        fileInput.addEventListener('change', () => {
+          if (fileInput.files && fileInput.files.length > 0) {
+            uploadMediaFile(fileInput.files[0]);
+          }
+        });
+      }
+    }
+
+    setupMediaControls();
+    loadMediaList();
 
     initSignaling();
   </script>

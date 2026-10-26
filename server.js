@@ -36,8 +36,74 @@ const MIME_TYPES = {
   '.json': 'application/json; charset=utf-8',
   '.png': 'image/png',
   '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon'
+  '.ico': 'image/x-icon',
+  '.mp4': 'video/mp4',
+  '.mkv': 'video/mp4',
+  '.webm': 'video/webm',
+  '.mov': 'video/quicktime',
+  '.m4v': 'video/mp4',
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.aac': 'audio/aac',
+  '.flac': 'audio/flac',
+  '.ogg': 'audio/ogg'
 };
+
+function formatBytes(bytes) {
+  if (!bytes || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+// Native HTTP Range Request Streaming (Web Video Caster / Real Media Server Engine)
+function handleMediaStream(req, res, filePath, ext) {
+  fs.stat(filePath, (err, stats) => {
+    if (err || !stats.isFile()) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      return res.end('404 Media Not Found');
+    }
+
+    const fileSize = stats.size;
+    const range = req.headers.range;
+    const contentType = MIME_TYPES[ext] || 'video/mp4';
+
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+      if (start >= fileSize || end >= fileSize) {
+        res.writeHead(416, {
+          'Content-Range': `bytes */${fileSize}`,
+          'Access-Control-Allow-Origin': '*'
+        });
+        return res.end();
+      }
+
+      const chunkSize = (end - start) + 1;
+      const fileStream = fs.createReadStream(filePath, { start, end });
+
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunkSize,
+        'Content-Type': contentType,
+        'Access-Control-Allow-Origin': '*'
+      });
+      fileStream.pipe(res);
+    } else {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Accept-Ranges': 'bytes',
+        'Content-Type': contentType,
+        'Access-Control-Allow-Origin': '*'
+      });
+      fs.createReadStream(filePath).pipe(res);
+    }
+  });
+}
 
 // Rooms state: code -> { presenter: wsClient, viewers: Set<wsClient> }
 const rooms = new Map();
@@ -105,6 +171,100 @@ function handleHttpRequest(req, res) {
   if (reqPath === '/ping') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('pong');
+    return;
+  }
+
+  // API: Get Media Files in media/ directory
+  if (reqPath === '/api/media-list') {
+    const mediaDir = path.join(__dirname, 'media');
+    if (!fs.existsSync(mediaDir)) {
+      try { fs.mkdirSync(mediaDir, { recursive: true }); } catch (e) {}
+    }
+    fs.readdir(mediaDir, (err, files) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        return res.end(JSON.stringify({ files: [] }));
+      }
+      const mediaFiles = [];
+      const validExts = ['.mp4', '.mkv', '.webm', '.mov', '.m4v', '.mp3', '.wav', '.flac', '.aac', '.ogg'];
+      for (const f of files) {
+        const p = path.join(mediaDir, f);
+        try {
+          const st = fs.statSync(p);
+          if (st.isFile()) {
+            const ext = path.extname(f).toLowerCase();
+            if (validExts.includes(ext)) {
+              mediaFiles.push({
+                name: f,
+                size: st.size,
+                sizeFormatted: formatBytes(st.size),
+                url: `/media/${encodeURIComponent(f)}`,
+                ext
+              });
+            }
+          }
+        } catch (e) {}
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.end(JSON.stringify({ files: mediaFiles }));
+    });
+    return;
+  }
+
+  // API: Upload Media File (Streamed directly to disk with zero RAM overhead)
+  if (reqPath === '/api/upload' && req.method === 'POST') {
+    const urlObj = new URL(req.url, 'http://localhost');
+    let filename = urlObj.searchParams.get('name') || `media_${Date.now()}.mp4`;
+    filename = path.basename(decodeURIComponent(filename)).replace(/[^a-zA-Z0-9._-]/g, '_');
+    const mediaDir = path.join(__dirname, 'media');
+    if (!fs.existsSync(mediaDir)) {
+      try { fs.mkdirSync(mediaDir, { recursive: true }); } catch (e) {}
+    }
+    const targetPath = path.join(mediaDir, filename);
+    const writeStream = fs.createWriteStream(targetPath);
+    req.pipe(writeStream);
+    writeStream.on('finish', () => {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.end(JSON.stringify({
+        success: true,
+        filename,
+        url: `/media/${encodeURIComponent(filename)}`
+      }));
+    });
+    writeStream.on('error', (err) => {
+      res.writeHead(500, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.end(JSON.stringify({ error: err.message }));
+    });
+    return;
+  }
+
+  // API: Delete Media File
+  if (reqPath === '/api/media-delete' && req.method === 'POST') {
+    const urlObj = new URL(req.url, 'http://localhost');
+    let filename = urlObj.searchParams.get('name');
+    if (filename) {
+      filename = path.basename(decodeURIComponent(filename));
+      const targetPath = path.join(__dirname, 'media', filename);
+      try {
+        if (fs.existsSync(targetPath)) fs.unlinkSync(targetPath);
+      } catch (e) {}
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+    res.end(JSON.stringify({ success: true }));
+    return;
+  }
+
+  // Real Media Server: Stream media file with HTTP 206 Range Requests
+  if (reqPath.startsWith('/media/')) {
+    const filename = decodeURIComponent(reqPath.replace(/^\/media\//, ''));
+    const mediaDir = path.join(__dirname, 'media');
+    const filePath = path.normalize(path.join(mediaDir, filename));
+    if (!filePath.startsWith(mediaDir)) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      return res.end('403 Forbidden');
+    }
+    const ext = path.extname(filePath).toLowerCase();
+    handleMediaStream(req, res, filePath, ext);
     return;
   }
 

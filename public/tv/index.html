@@ -225,6 +225,8 @@
     let currentPresenterId = null;
     let pendingCandidates = [];
     let remoteStream = null;
+    let playbackMode = 'webrtc'; // 'webrtc' or 'media'
+    let currentMediaTitle = '';
 
     const rtcIceConfig = {
       iceServers: [
@@ -398,8 +400,60 @@
           return;
         }
 
+        // Web Video Caster (Direct High-Quality Media Server Stream)
+        if (msg.type === 'cast-media' && msg.mediaUrl) {
+          playbackMode = 'media';
+          currentMediaTitle = msg.title || 'Video';
+          console.log('[TV Media] Playing direct media stream:', msg.mediaUrl);
+
+          if (nativePc) {
+            try { nativePc.close(); nativePc = null; } catch (e) {}
+          }
+
+          tvVideo.srcObject = null;
+          remoteStream = null;
+          tvVideo.removeAttribute('src');
+          const fullMediaUrl = msg.mediaUrl.startsWith('http') ? msg.mediaUrl : (window.location.origin + msg.mediaUrl);
+          tvVideo.src = fullMediaUrl;
+          tvVideo.currentTime = msg.startTime || 0;
+          tvVideo.muted = false;
+          tvVideo.volume = 1.0;
+          hideStandby();
+          tvVideo.play().catch(() => {
+            tvVideo.muted = true;
+            tvVideo.play().catch(() => {});
+          });
+          return;
+        }
+
+        if (msg.type === 'media-control') {
+          if (msg.action === 'play') tvVideo.play().catch(() => {});
+          if (msg.action === 'pause') tvVideo.pause();
+          if (msg.action === 'seek' && typeof msg.time === 'number') {
+            tvVideo.currentTime = msg.time;
+          }
+          if (msg.action === 'jump' && typeof msg.delta === 'number') {
+            tvVideo.currentTime += msg.delta;
+          }
+          if (msg.action === 'volume' && typeof msg.level === 'number') {
+            tvVideo.volume = Math.max(0, Math.min(1, msg.level));
+          }
+          return;
+        }
+
+        if (msg.type === 'switch-to-screen') {
+          playbackMode = 'webrtc';
+          tvVideo.pause();
+          tvVideo.removeAttribute('src');
+          tvVideo.load();
+          showStandby('Welcome to SachCast', 'Waiting for your friend to start sharing... 🍿');
+          return;
+        }
+
         // WebRTC Offer from Presenter
         if (msg.type === 'signal-offer' && msg.offer) {
+          playbackMode = 'webrtc';
+          tvVideo.removeAttribute('src');
           currentPresenterId = msg.from;
           await handleNativeOffer(msg.offer, msg.from);
           return;
@@ -577,8 +631,37 @@
       });
 
       dataConn.on('data', (data) => {
-        if (data && data.type === 'stream-stopped') {
+        if (!data) return;
+        if (data.type === 'stream-stopped') {
           showStandby('Sharing Stopped', 'Your friend stopped sharing their screen.');
+        } else if (data.type === 'cast-media' && data.mediaUrl) {
+          playbackMode = 'media';
+          currentMediaTitle = data.title || 'Video';
+          tvVideo.srcObject = null;
+          remoteStream = null;
+          tvVideo.removeAttribute('src');
+          const fullMediaUrl = data.mediaUrl.startsWith('http') ? data.mediaUrl : (window.location.origin + data.mediaUrl);
+          tvVideo.src = fullMediaUrl;
+          tvVideo.currentTime = data.startTime || 0;
+          tvVideo.muted = false;
+          tvVideo.volume = 1.0;
+          hideStandby();
+          tvVideo.play().catch(() => {
+            tvVideo.muted = true;
+            tvVideo.play().catch(() => {});
+          });
+        } else if (data.type === 'media-control') {
+          if (data.action === 'play') tvVideo.play().catch(() => {});
+          if (data.action === 'pause') tvVideo.pause();
+          if (data.action === 'seek' && typeof data.time === 'number') tvVideo.currentTime = data.time;
+          if (data.action === 'jump' && typeof data.delta === 'number') tvVideo.currentTime += data.delta;
+          if (data.action === 'volume' && typeof data.level === 'number') tvVideo.volume = Math.max(0, Math.min(1, data.level));
+        } else if (data.type === 'switch-to-screen') {
+          playbackMode = 'webrtc';
+          tvVideo.pause();
+          tvVideo.removeAttribute('src');
+          tvVideo.load();
+          showStandby('Welcome to SachCast', 'Waiting for your friend to start sharing... 🍿');
         }
       });
 
@@ -634,10 +717,49 @@
       handleUserGesture();
     }, { passive: true });
 
+    // Send real-time timeline progress back to presenter cockpit
+    function sendMediaStatus() {
+      if (playbackMode !== 'media') return;
+      const payload = JSON.stringify({
+        type: 'media-status',
+        currentTime: tvVideo.currentTime,
+        duration: tvVideo.duration || 0,
+        paused: tvVideo.paused,
+        volume: tvVideo.volume,
+        title: currentMediaTitle
+      });
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(payload);
+      }
+      if (dataConn && dataConn.open) {
+        try { dataConn.send(JSON.parse(payload)); } catch(e) {}
+      }
+    }
+
+    tvVideo.addEventListener('timeupdate', sendMediaStatus);
+    tvVideo.addEventListener('play', sendMediaStatus);
+    tvVideo.addEventListener('pause', sendMediaStatus);
+    tvVideo.addEventListener('seeked', sendMediaStatus);
+
+    tvVideo.addEventListener('ended', () => {
+      if (playbackMode === 'media') {
+        showStandby('Movie Finished', 'The video has finished playing. 🎬');
+      }
+    });
+
     window.addEventListener('keydown', (e) => {
       handleUserGesture();
 
-      if (e.key === 'Enter' || e.keyCode === 13 || e.key === ' ' || e.keyCode === 32) {
+      if (e.key === ' ' || e.keyCode === 32) {
+        if (playbackMode === 'media') {
+          if (tvVideo.paused) tvVideo.play().catch(() => {});
+          else tvVideo.pause();
+        }
+      } else if (e.key === 'ArrowRight' || e.keyCode === 39) {
+        if (playbackMode === 'media') tvVideo.currentTime += 10;
+      } else if (e.key === 'ArrowLeft' || e.keyCode === 37) {
+        if (playbackMode === 'media') tvVideo.currentTime -= 10;
+      } else if (e.key === 'Enter' || e.keyCode === 13) {
         if (standbyScreen.style.display !== 'none' && document.activeElement === manualCodeInput) {
           applyManualCode();
         } else {
