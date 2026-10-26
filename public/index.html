@@ -3,23 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SachCast - Minimal Screen Broadcast</title>
+  <title>SachCast - Screen Broadcaster</title>
   <link rel="icon" type="image/svg+xml" href="/icon.svg">
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#000000">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   
-  <!-- Load QRCode library -->
   <script src="/qrcode.min.js"></script>
   <script>
     if (typeof QRCode === 'undefined') {
       document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>');
     }
   </script>
-
-  <!-- Load PeerJS library -->
   <script src="/peerjs.min.js"></script>
   <script>
     if (typeof Peer === 'undefined') {
@@ -33,7 +30,6 @@
       --surface: #0a0a0a;
       --card-bg: #111111;
       --border: #222222;
-      --border-light: #333333;
       --text: #ffffff;
       --text-muted: #888888;
       --text-dim: #555555;
@@ -55,7 +51,6 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Minimalist Header */
     header {
       padding: 1.15rem 2rem;
       border-bottom: 1px solid var(--border);
@@ -133,7 +128,6 @@
       color: #000000;
     }
 
-    /* Main Workspace */
     main {
       flex: 1;
       max-width: 1400px;
@@ -151,7 +145,6 @@
       }
     }
 
-    /* Clean Video Stage */
     .stage-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -173,9 +166,6 @@
       font-size: 0.95rem;
       font-weight: 600;
       letter-spacing: -0.01em;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
     }
 
     .stage-meta {
@@ -200,7 +190,6 @@
       background: #000000;
     }
 
-    /* Live HUD Overlay */
     .stats-overlay {
       position: absolute;
       top: 1rem;
@@ -258,7 +247,6 @@
       margin-bottom: 1.5rem;
     }
 
-    /* Automatic Quality Badge */
     .quality-indicator-row {
       display: inline-flex;
       align-items: center;
@@ -336,7 +324,6 @@
       color: #000000;
     }
 
-    /* Minimalist Sidebar */
     .sidebar {
       display: flex;
       flex-direction: column;
@@ -359,7 +346,6 @@
       margin-bottom: 1rem;
     }
 
-    /* Clean Code Display */
     .code-display-box {
       border: 1px solid var(--border);
       background: #000000;
@@ -415,7 +401,6 @@
       color: #000000;
     }
 
-    /* Viewers list */
     .viewers-list {
       list-style: none;
       display: flex;
@@ -445,7 +430,6 @@
       margin-right: 0.5rem;
     }
 
-    /* Clean Monochrome QR Box */
     .qr-container {
       text-align: center;
     }
@@ -483,7 +467,6 @@
   </header>
 
   <main>
-    <!-- Screen Share Stage -->
     <div class="stage-card">
       <div class="stage-header">
         <span class="stage-title">Screen Feed</span>
@@ -491,13 +474,12 @@
       </div>
 
       <div class="stage-body">
-        <!-- Live HUD Overlay -->
         <div class="stats-overlay" id="statsOverlay" style="display: none;">
           <div class="stat-chip" id="chipLatency">⚡ Latency: -- ms</div>
           <div class="stat-chip" id="chipFps">🎞️ 60 FPS</div>
           <div class="stat-chip" id="chipBitrate">📶 40 Mbps</div>
-          <div class="stat-chip" id="chipRes">📺 Native 4K UHD</div>
-          <div class="stat-chip" id="chipHw">💎 Zero Blur • H.264 HW</div>
+          <div class="stat-chip" id="chipRes">📺 Native Quality</div>
+          <div class="stat-chip">💎 Crisp Text • H.264 HW</div>
         </div>
 
         <div class="empty-state" id="emptyState">
@@ -509,15 +491,15 @@
             </svg>
           </div>
           <h3>Wireless Screen Broadcast</h3>
-          <p>Instant ultra-low latency screen sharing to any Smart TV browser. No setup required.</p>
+          <p>Instant ultra-low latency screen sharing to any Smart TV browser with crystal-clear native quality.</p>
           
           <div class="quality-indicator-row">
             <span class="quality-pulse"></span>
-            <span>Highest Quality Pre-configured (4K UHD • 60 FPS • Real-time)</span>
+            <span>Maximum Quality Locked (Native 60 FPS • Real-Time WebRTC)</span>
           </div>
 
           <div>
-            <button class="btn-black" onclick="startScreenShare()">
+            <button class="btn-black" id="primaryShareBtn" onclick="startScreenShare()">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                 <circle cx="12" cy="12" r="10"></circle>
                 <polygon points="10 8 16 12 10 16 10 8"></polygon>
@@ -546,9 +528,7 @@
       </div>
     </div>
 
-    <!-- Minimalist Controls Sidebar -->
     <div class="sidebar">
-      <!-- TV Code Panel -->
       <div class="panel">
         <div class="panel-label">TV Connection</div>
 
@@ -567,7 +547,6 @@
         </div>
       </div>
 
-      <!-- Connected Viewers -->
       <div class="panel">
         <div class="panel-label">Connected Devices</div>
         <div id="noViewersNotice" style="color: var(--text-dim); font-size: 0.85rem; text-align: center; padding: 0.85rem 0;">
@@ -576,7 +555,6 @@
         <ul class="viewers-list" id="viewersList" style="display: none;"></ul>
       </div>
 
-      <!-- Minimalist QR Scan -->
       <div class="panel qr-container">
         <div class="panel-label">Scan to View</div>
         <div id="qrcode"></div>
@@ -613,7 +591,6 @@
     }
     updateQrCode(tvUrl);
 
-    // Auto-discover true network LAN IP
     fetch('/api/info')
       .then(res => res.json())
       .then(info => {
@@ -635,82 +612,10 @@
       alert('Copied URL: ' + tvUrl);
     }
 
-    // --- LOCKED MAXIMUM QUALITY PARAMETERS (NO USER CONFIG NEEDED) ---
-    const MAX_BITRATE_KBPS = 45000; // 45 Mbps uncapped bandwidth
-    const TARGET_FPS = 60;
+    // --- High-Quality WebRTC Optimization ---
+    const MAX_BITRATE_BPS = 40000000; // 40 Mbps high-bitrate
 
-    // SDP Munging for Maximum Quality & Zero Latency
-    function optimizeSdpForMaxQuality(sdp) {
-      let lines = sdp.split('\r\n');
-      let newLines = [];
-      let inVideo = false;
-      let inAudio = false;
-
-      for (let i = 0; i < lines.length; i++) {
-        let line = lines[i];
-
-        if (line.startsWith('m=video')) {
-          inVideo = true;
-          inAudio = false;
-
-          // Reorder codecs: Prioritize H.264 for hardware ASIC decoding on TVs
-          const parts = line.split(' ');
-          const header = parts.slice(0, 3);
-          const pts = parts.slice(3);
-          const h264Pts = [];
-          const otherPts = [];
-
-          for (const pt of pts) {
-            const rtp = lines.find(l => l.startsWith(`a=rtpmap:${pt} H264/`));
-            if (rtp) h264Pts.push(pt);
-            else otherPts.push(pt);
-          }
-
-          if (h264Pts.length > 0) {
-            line = [...header, ...h264Pts, ...otherPts].join(' ');
-          }
-
-          newLines.push(line);
-          // Set maximum bandwidth limit right below m=video
-          newLines.push(`b=AS:${MAX_BITRATE_KBPS}`);
-          newLines.push(`b=TIAS:${MAX_BITRATE_KBPS * 1000}`);
-          // Instruct WebRTC zero render delay
-          newLines.push('a=playout-delay:0 0');
-          continue;
-        } else if (line.startsWith('m=audio')) {
-          inVideo = false;
-          inAudio = true;
-          newLines.push(line);
-          newLines.push('b=AS:320');
-          newLines.push('b=TIAS:320000');
-          continue;
-        } else if (line.startsWith('m=')) {
-          inVideo = false;
-          inAudio = false;
-        }
-
-        // Lock ultra-high video bitrates
-        if (inVideo && line.startsWith('a=fmtp:')) {
-          if (!line.includes('x-google-min-bitrate')) {
-            line = `${line};x-google-min-bitrate=20000;x-google-start-bitrate=35000;x-google-max-bitrate=60000`;
-          }
-        }
-
-        // Stereo 48kHz audio with 10ms packetization
-        if (inAudio && line.startsWith('a=fmtp:')) {
-          if (!line.includes('minptime=')) {
-            line = `${line};minptime=10;stereo=1;sprop-stereo=1;maxaveragebitrate=256000;cbr=1`;
-          }
-        }
-
-        newLines.push(line);
-      }
-
-      return newLines.join('\r\n');
-    }
-
-    // Apply Maximum Quality to RTCRtpSender
-    async function applyMaxQualityToSender(pc) {
+    async function applyHighQualityParameters(pc) {
       if (!pc || !pc.getSenders) return;
       const senders = pc.getSenders();
       for (const sender of senders) {
@@ -720,29 +625,46 @@
             if (!params.encodings || params.encodings.length === 0) {
               params.encodings = [{}];
             }
-            params.encodings[0].maxBitrate = MAX_BITRATE_KBPS * 1000;
-            params.encodings[0].maxFramerate = TARGET_FPS;
+            params.encodings[0].maxBitrate = MAX_BITRATE_BPS;
+            params.encodings[0].maxFramerate = 60;
             params.encodings[0].priority = 'high';
             params.encodings[0].networkPriority = 'high';
-            // Maintain exact resolution (Zero downscaling / zero blur)
+            // Maintain exact native resolution - zero downscaling/blurring!
             params.degradationPreference = 'maintain-resolution';
 
             await sender.setParameters(params);
-            console.log(`[Sender Quality] Locked to 45 Mbps 60fps Maintain-Resolution`);
+            console.log('[Quality] Locked to 40 Mbps 60 FPS Maintain-Resolution');
           } catch (err) {
-            console.warn('Sender parameter tuning note:', err);
+            console.warn('Could not set sender parameters:', err);
           }
         }
       }
     }
 
-    // --- Connections State ---
+    function prioritizeH264(pc) {
+      if (window.RTCRtpSender && RTCRtpSender.getCapabilities) {
+        const caps = RTCRtpSender.getCapabilities('video');
+        if (caps && caps.codecs) {
+          const h264 = caps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/h264');
+          const others = caps.codecs.filter(c => c.mimeType.toLowerCase() !== 'video/h264');
+          const transceiver = pc.getTransceivers().find(t => t.sender && t.sender.track && t.sender.track.kind === 'video');
+          if (transceiver && transceiver.setCodecPreferences) {
+            try {
+              transceiver.setCodecPreferences([...h264, ...others]);
+            } catch (e) {}
+          }
+        }
+      }
+    }
+
+    // --- State & Connections ---
     let localStream = null;
     let signalingMode = 'unknown'; // 'lan' or 'cloud'
     let ws = null;
     let peer = null;
 
     const knownViewers = new Map();
+    // nativeConnections: viewerId -> { pc, dc, pendingCandidates: [] }
     const nativeConnections = new Map();
     const activeCalls = new Map();
     const dataConnections = new Map();
@@ -756,13 +678,17 @@
     };
 
     function initSignaling() {
+      if (window.location.protocol === 'file:' || !window.location.host) {
+        initPeerJS();
+        return;
+      }
       tryLocalWebSocket();
     }
 
     function tryLocalWebSocket() {
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${wsProtocol}//${window.location.host}`;
-      console.log('[Signaling] Attempting Direct LAN WebSocket:', wsUrl);
+      console.log('[Signaling] Connecting to LAN WebSocket:', wsUrl);
       let socketConnected = false;
 
       try {
@@ -813,7 +739,7 @@
       }
     }
 
-    function handleWsMessage(raw) {
+    async function handleWsMessage(raw) {
       try {
         const msg = JSON.parse(raw);
 
@@ -849,21 +775,33 @@
           return;
         }
 
+        // WebRTC Answer from Viewer
         if (msg.type === 'signal-answer' && msg.from) {
           const conn = nativeConnections.get(msg.from);
           if (conn && conn.pc) {
-            conn.pc.setRemoteDescription(new RTCSessionDescription(msg.answer))
-              .then(() => applyMaxQualityToSender(conn.pc))
-              .catch(e => console.warn('setRemoteDescription answer error:', e));
+            await conn.pc.setRemoteDescription(new RTCSessionDescription(msg.answer));
+            // Drain queued ICE candidates safely
+            if (conn.pendingCandidates && conn.pendingCandidates.length > 0) {
+              for (const cand of conn.pendingCandidates) {
+                await conn.pc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
+              }
+              conn.pendingCandidates = [];
+            }
+            await applyHighQualityParameters(conn.pc);
           }
           return;
         }
 
-        if (msg.type === 'signal-candidate' && msg.from) {
+        // ICE Candidate from Viewer
+        if (msg.type === 'signal-candidate' && msg.from && msg.candidate) {
           const conn = nativeConnections.get(msg.from);
-          if (conn && conn.pc && msg.candidate) {
-            conn.pc.addIceCandidate(new RTCIceCandidate(msg.candidate))
-              .catch(e => console.warn('addIceCandidate error:', e));
+          if (conn && conn.pc) {
+            if (conn.pc.remoteDescription) {
+              conn.pc.addIceCandidate(new RTCIceCandidate(msg.candidate)).catch(() => {});
+            } else {
+              // Queue candidate until remote description is set
+              conn.pendingCandidates.push(msg.candidate);
+            }
           }
           return;
         }
@@ -875,10 +813,18 @@
 
     async function callViewerNative(viewerId) {
       if (!localStream) return;
-      console.log(`[WebRTC LAN] Creating Native Max-Quality offer for TV: ${viewerId}`);
-      const pc = new RTCPeerConnection(rtcIceConfig);
+      console.log(`[WebRTC LAN] Creating Native Call for TV: ${viewerId}`);
 
-      // Add local tracks with contentHint detail
+      // Close previous connection if exists
+      if (nativeConnections.has(viewerId)) {
+        try { nativeConnections.get(viewerId).pc.close(); } catch (e) {}
+      }
+
+      const pc = new RTCPeerConnection(rtcIceConfig);
+      const connData = { pc, dc: null, pendingCandidates: [] };
+      nativeConnections.set(viewerId, connData);
+
+      // Add local tracks with contentHint detail (crisp text)
       localStream.getTracks().forEach(track => {
         if (track.kind === 'video' && 'contentHint' in track) {
           track.contentHint = 'detail';
@@ -886,24 +832,12 @@
         pc.addTrack(track, localStream);
       });
 
-      // Prefer H.264 hardware decoding
-      if (window.RTCRtpSender && RTCRtpSender.getCapabilities) {
-        const caps = RTCRtpSender.getCapabilities('video');
-        if (caps && caps.codecs) {
-          const h264 = caps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/h264');
-          const others = caps.codecs.filter(c => c.mimeType.toLowerCase() !== 'video/h264');
-          const transceiver = pc.getTransceivers().find(t => t.sender && t.sender.track && t.sender.track.kind === 'video');
-          if (transceiver && transceiver.setCodecPreferences) {
-            try { transceiver.setCodecPreferences([...h264, ...others]); } catch(e) {}
-          }
-        }
-      }
+      prioritizeH264(pc);
 
-      // Latency measurement data channel
+      // DataChannel for latency ping/pong
       const dc = pc.createDataChannel('sachcast-latency', { ordered: false, maxRetransmits: 0 });
+      connData.dc = dc;
       setupDataChannel(dc, viewerId);
-
-      nativeConnections.set(viewerId, { pc, dc, rtt: null });
 
       pc.onicecandidate = (event) => {
         if (event.candidate && ws && ws.readyState === WebSocket.OPEN) {
@@ -916,11 +850,8 @@
       };
 
       try {
-        const rawOffer = await pc.createOffer();
-        const optimizedSdp = optimizeSdpForMaxQuality(rawOffer.sdp);
-        const tunedOffer = new RTCSessionDescription({ type: 'offer', sdp: optimizedSdp });
-
-        await pc.setLocalDescription(tunedOffer);
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
 
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
@@ -930,7 +861,7 @@
           }));
         }
       } catch (err) {
-        console.error('Error creating native offer:', err);
+        console.error('Error creating offer:', err);
       }
     }
 
@@ -939,7 +870,7 @@
       if (peer) return;
       signalingMode = 'cloud';
       const presenterPeerId = 'sachcast-host-' + roomCode;
-      console.log('[Signaling] Initializing PeerJS Cloud Mode for ID:', presenterPeerId);
+      console.log('[Signaling] Initializing PeerJS Cloud for ID:', presenterPeerId);
 
       peer = new Peer(presenterPeerId, {
         debug: 1,
@@ -982,7 +913,7 @@
         activeCalls.set(call.peer, call);
         if (localStream) {
           call.answer(localStream);
-          if (call.peerConnection) applyMaxQualityToSender(call.peerConnection);
+          if (call.peerConnection) applyHighQualityParameters(call.peerConnection);
         }
       });
 
@@ -1004,31 +935,22 @@
       activeCalls.set(viewerPeerId, call);
 
       if (call.peerConnection) {
-        applyMaxQualityToSender(call.peerConnection);
+        applyHighQualityParameters(call.peerConnection);
       }
 
       call.on('close', () => activeCalls.delete(viewerPeerId));
     }
 
-    // --- Latency Measurement ---
     function setupDataChannel(dc, viewerId) {
       dc.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
           if (data.type === 'pong' && data.t) {
             const rtt = Math.round(performance.now() - data.t);
-            const conn = nativeConnections.get(viewerId);
-            if (conn) conn.rtt = rtt;
-
             document.getElementById('chipLatency').innerText = `⚡ Latency: ${rtt} ms`;
 
             if (dc.readyState === 'open') {
-              dc.send(JSON.stringify({
-                type: 'stats',
-                rtt,
-                fps: 60,
-                bitrate: MAX_BITRATE_KBPS
-              }));
+              dc.send(JSON.stringify({ type: 'stats', rtt }));
             }
           }
         } catch (e) {}
@@ -1042,53 +964,7 @@
           conn.dc.send(JSON.stringify({ type: 'ping', t: now }));
         }
       });
-      updateStats();
     }, 1000);
-
-    async function updateStats() {
-      if (!localStream) return;
-
-      const videoTrack = localStream.getVideoTracks()[0];
-      if (videoTrack) {
-        const settings = videoTrack.getSettings ? videoTrack.getSettings() : {};
-        if (settings.width && settings.height) {
-          document.getElementById('chipRes').innerText = `📺 ${settings.width}×${settings.height}`;
-        }
-        if (settings.frameRate) {
-          document.getElementById('chipFps').innerText = `🎞️ ${Math.round(settings.frameRate)} FPS`;
-        }
-      }
-
-      let pc = null;
-      if (nativeConnections.size > 0) {
-        pc = nativeConnections.values().next().value.pc;
-      } else if (activeCalls.size > 0) {
-        pc = activeCalls.values().next().value.peerConnection;
-      }
-
-      if (pc && pc.getStats) {
-        try {
-          const stats = await pc.getStats();
-          stats.forEach(report => {
-            if (report.type === 'outbound-rtp' && report.kind === 'video') {
-              if (report.bytesSent && lastBytesSent) {
-                const now = report.timestamp;
-                const bytes = report.bytesSent - lastBytesSent;
-                const timeDiff = (now - lastTimestamp) / 1000;
-                if (timeDiff > 0) {
-                  const mbps = ((bytes * 8) / (timeDiff * 1000000)).toFixed(1);
-                  document.getElementById('chipBitrate').innerText = `📶 ${mbps} Mbps`;
-                }
-              }
-              lastBytesSent = report.bytesSent;
-              lastTimestamp = report.timestamp;
-            }
-          });
-        } catch (e) {}
-      }
-    }
-    let lastBytesSent = 0;
-    let lastTimestamp = 0;
 
     function renderViewers() {
       const list = document.getElementById('viewersList');
@@ -1128,27 +1004,34 @@
       });
     }
 
-    // --- Screen Sharing (Locked to Maximum 4K UHD 60fps Native) ---
+    // --- Screen Sharing (Robust Capture with Audio Fallback) ---
     async function startScreenShare() {
       try {
-        localStream = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            cursor: 'always',
-            width: { ideal: 3840, max: 3840 },
-            height: { ideal: 2160, max: 2160 },
-            frameRate: { ideal: TARGET_FPS, max: TARGET_FPS }
-          },
-          audio: {
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: false,
-            channelCount: 2,
-            sampleRate: 48000,
-            latency: 0
-          }
-        });
+        let stream = null;
+        try {
+          // Attempt capture with audio first
+          stream = await navigator.mediaDevices.getDisplayMedia({
+            video: {
+              cursor: 'always',
+              frameRate: { ideal: 60, max: 60 }
+            },
+            audio: true
+          });
+        } catch (audioErr) {
+          // Fallback to video-only if audio is not supported or refused
+          console.warn('Audio capture unavailable, falling back to video-only:', audioErr);
+          stream = await navigator.mediaDevices.getDisplayMedia({
+            video: {
+              cursor: 'always',
+              frameRate: { ideal: 60, max: 60 }
+            },
+            audio: false
+          });
+        }
 
-        // Lock text sharpness (Zero Blurring)
+        localStream = stream;
+
+        // Apply contentHint for exact native text clarity
         const videoTrack = localStream.getVideoTracks()[0];
         if (videoTrack && 'contentHint' in videoTrack) {
           videoTrack.contentHint = 'detail';
@@ -1162,6 +1045,12 @@
         document.getElementById('startBtn').style.display = 'none';
         document.getElementById('stopBtn').style.display = 'inline-flex';
 
+        // Update resolution on HUD
+        const settings = videoTrack.getSettings ? videoTrack.getSettings() : {};
+        if (settings.width && settings.height) {
+          document.getElementById('chipRes').innerText = `📺 ${settings.width}×${settings.height}`;
+        }
+
         callAllViewers();
 
         videoTrack.onended = () => {
@@ -1169,7 +1058,7 @@
         };
 
       } catch (err) {
-        console.warn('Share canceled or error:', err);
+        console.warn('Screen share canceled or error:', err);
       }
     }
 

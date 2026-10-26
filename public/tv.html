@@ -9,9 +9,8 @@
   <meta name="theme-color" content="#000000">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   
-  <!-- PeerJS Fallback -->
   <script src="/peerjs.min.js"></script>
   <script>
     if (typeof Peer === 'undefined') {
@@ -58,7 +57,6 @@
       background: #000000;
     }
 
-    /* Minimalist Standby Overlay */
     #standbyScreen {
       position: absolute;
       inset: 0;
@@ -100,7 +98,6 @@
       margin-bottom: 2rem;
     }
 
-    /* Minimal Code Box */
     .code-box-wrapper {
       background: #0a0a0a;
       border: 1px solid #222222;
@@ -168,7 +165,6 @@
       box-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
     }
 
-    /* TV Top HUD */
     .tv-hud {
       position: absolute;
       top: 1.5rem;
@@ -249,7 +245,7 @@
   <div id="flashOverlay"></div>
 
   <div class="tv-hud" id="tvHud">
-    <div class="tv-stat-pill" id="hudStats">⚡ Ultra-Low Latency | WebRTC</div>
+    <div class="tv-stat-pill" id="hudStats">⚡ Ultra-Low Latency • 60 FPS • WebRTC</div>
     <button class="hud-btn" onclick="toggleFullScreen()">⛶ Fullscreen</button>
   </div>
 
@@ -299,7 +295,6 @@
     let roomCode = urlParams.get('room') || '7777';
     manualCodeInput.value = roomCode;
 
-    // --- State & Connections ---
     let signalingMode = 'unknown'; // 'lan' or 'cloud'
     let ws = null;
     let peer = null;
@@ -307,6 +302,7 @@
     let nativeDc = null;
     let dataConn = null;
     let currentPresenterId = null;
+    let pendingCandidates = [];
 
     const rtcIceConfig = {
       iceServers: [
@@ -326,12 +322,11 @@
       return 'Smart TV';
     }
 
-    // --- Screen WakeLock (Prevent TV Screensaver/Sleep) ---
+    // Screen WakeLock to prevent TV screensaver
     async function requestWakeLock() {
       if ('wakeLock' in navigator) {
         try {
           await navigator.wakeLock.request('screen');
-          console.log('[TV] WakeLock acquired');
         } catch (e) {}
       }
     }
@@ -340,31 +335,11 @@
       if (document.visibilityState === 'visible') requestWakeLock();
     });
 
-    // --- SDP Tuning for TV Receiver ---
-    function tuneReceiverSdp(sdp) {
-      let lines = sdp.split('\r\n');
-      let newLines = [];
-
-      for (let i = 0; i < lines.length; i++) {
-        let line = lines[i];
-        if (line.startsWith('m=video')) {
-          newLines.push(line);
-          newLines.push('b=AS:45000');
-          newLines.push('b=TIAS:45000000');
-          newLines.push('a=playout-delay:0 0');
-          continue;
-        }
-        newLines.push(line);
-      }
-      return newLines.join('\r\n');
-    }
-
-    // --- Apply Zero Playout Delay on RTCRtpReceiver ---
+    // Zero playout delay & zero jitter buffer
     function tuneVideoReceiver(pc) {
       if (!pc || !pc.getReceivers) return;
       pc.getReceivers().forEach(receiver => {
         if (receiver.track && receiver.track.kind === 'video') {
-          // Instruct browser pipeline zero jitter buffer
           if ('jitterBufferTarget' in receiver) {
             try { receiver.jitterBufferTarget = 0; } catch (e) {}
           }
@@ -375,8 +350,7 @@
       });
     }
 
-    // --- Active Buffer Drift Eliminator (CRITICAL for TV latency) ---
-    // If TV browser stutters or delays, buffer accumulates. This keeps it at live edge!
+    // Active buffer drift eliminator (prevents TV lag accumulation)
     setInterval(() => {
       if (!tvVideo.srcObject) return;
       if (tvVideo.buffered && tvVideo.buffered.length > 0) {
@@ -390,6 +364,10 @@
 
     // --- Hybrid Signaling Initialization ---
     function initTVReceiver() {
+      if (window.location.protocol === 'file:' || !window.location.host) {
+        initTVPeer();
+        return;
+      }
       tryLocalWebSocket();
     }
 
@@ -417,9 +395,9 @@
           console.log('[TV Signaling] Connected via Direct LAN WebSocket ⚡');
 
           statusDot.style.background = '#ffffff';
-          statusLabel.innerText = 'Paired with PC (LAN ⚡)';
+          statusLabel.innerText = 'Connected to Host (LAN ⚡)';
           screenTitle.innerText = 'Paired with PC';
-          screenSubtitle.innerText = 'Click "Share Screen" on your computer to broadcast.';
+          screenSubtitle.innerText = 'Waiting for PC to start screen broadcast...';
 
           ws.send(JSON.stringify({
             type: 'register-viewer',
@@ -450,7 +428,6 @@
       }
     }
 
-    // --- Handle LAN WebSocket Messages ---
     async function handleWsMessage(raw) {
       try {
         const msg = JSON.parse(raw);
@@ -496,10 +473,12 @@
           return;
         }
 
-        // WebRTC ICE Candidate from Presenter
+        // ICE Candidate from Presenter
         if (msg.type === 'signal-candidate' && msg.candidate) {
-          if (nativePc) {
-            await nativePc.addIceCandidate(new RTCIceCandidate(msg.candidate)).catch(e => console.warn(e));
+          if (nativePc && nativePc.remoteDescription) {
+            await nativePc.addIceCandidate(new RTCIceCandidate(msg.candidate)).catch(() => {});
+          } else {
+            pendingCandidates.push(msg.candidate);
           }
           return;
         }
@@ -517,9 +496,10 @@
       }
 
       nativePc = new RTCPeerConnection(rtcIceConfig);
+      pendingCandidates = [];
 
       nativePc.ontrack = (event) => {
-        console.log('[WebRTC LAN] Received remote media stream:', event.streams);
+        console.log('[WebRTC LAN] Remote stream received:', event.streams);
         tuneVideoReceiver(nativePc);
 
         if (event.streams && event.streams[0]) {
@@ -553,11 +533,16 @@
         await nativePc.setRemoteDescription(new RTCSessionDescription(offer));
         tuneVideoReceiver(nativePc);
 
-        const rawAnswer = await nativePc.createAnswer();
-        const tunedSdp = tuneReceiverSdp(rawAnswer.sdp);
-        const tunedAnswer = new RTCSessionDescription({ type: 'answer', sdp: tunedSdp });
+        // Safely flush queued ICE candidates
+        if (pendingCandidates.length > 0) {
+          for (const cand of pendingCandidates) {
+            await nativePc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
+          }
+          pendingCandidates = [];
+        }
 
-        await nativePc.setLocalDescription(tunedAnswer);
+        const answer = await nativePc.createAnswer();
+        await nativePc.setLocalDescription(answer);
 
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
@@ -571,17 +556,11 @@
       }
     }
 
-    // --- TV DataChannel (Ping-Pong & Live Stats) ---
     function setupDataChannel(dc) {
-      dc.onopen = () => {
-        console.log('[DataChannel TV] Opened');
-      };
-
       dc.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
 
-          // Latency ping -> reply with pong immediately
           if (data.type === 'ping' && data.t) {
             if (dc.readyState === 'open') {
               dc.send(JSON.stringify({ type: 'pong', t: data.t }));
@@ -589,9 +568,8 @@
             return;
           }
 
-          // Live broadcast stats from presenter
           if (data.type === 'stats') {
-            hudStats.innerText = `⚡ ${data.rtt}ms | 60 FPS | 4K Ultra HD | H.264 HW`;
+            hudStats.innerText = `⚡ ${data.rtt}ms | 60 FPS | Native Quality`;
             showHudBriefly();
           }
         } catch (e) {}
@@ -614,7 +592,7 @@
 
       peer.on('open', () => {
         statusDot.style.background = '#ffffff';
-        statusLabel.innerText = 'Paired with PC (Cloud ☁️)';
+        statusLabel.innerText = 'Connected (Cloud ☁️)';
         connectToHostPeerJS();
       });
 
@@ -672,7 +650,6 @@
       });
     }
 
-    // --- UI Interactions & Fullscreen ---
     function applyManualCode() {
       const code = manualCodeInput.value.trim();
       if (code.length >= 4) {
@@ -705,7 +682,7 @@
 
     function enableAudio() {
       tvVideo.muted = false;
-      tvVideo.play();
+      tvVideo.play().catch(() => {});
       audioPrompt.style.display = 'none';
     }
 
@@ -717,7 +694,6 @@
       }
     }
 
-    // HUD auto-hide
     let hudTimer = null;
     function showHudBriefly() {
       document.body.classList.add('hud-visible');
@@ -727,7 +703,6 @@
       }, 4000);
     }
 
-    // Remote Control & Keyboard listeners
     window.addEventListener('keydown', (e) => {
       enableAudio();
       showHudBriefly();
@@ -750,7 +725,6 @@
       showHudBriefly();
     });
 
-    // Check Cloud peer connection heartbeat
     setInterval(() => {
       if (signalingMode === 'cloud' && (!dataConn || !dataConn.open)) {
         connectToHostPeerJS();
