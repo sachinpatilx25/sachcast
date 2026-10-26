@@ -7,7 +7,21 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Load QRCode library -->
+  <script src="/qrcode.min.js"></script>
+  <script>
+    if (typeof QRCode === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>');
+    }
+  </script>
+  <!-- Load PeerJS library for cloud serverless WebRTC -->
+  <script src="/peerjs.min.js"></script>
+  <script>
+    if (typeof Peer === 'undefined') {
+      document.write('<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"><\/script>');
+    }
+  </script>
+
   <style>
     :root {
       --bg: #070a12;
@@ -102,8 +116,8 @@
     }
 
     .tv-mode-btn {
-      background: rgba(59, 130, 246, 0.12);
-      border: 1px solid rgba(59, 130, 246, 0.3);
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.35);
       color: #93c5fd;
       padding: 0.5rem 1rem;
       border-radius: 10px;
@@ -114,7 +128,7 @@
     }
 
     .tv-mode-btn:hover {
-      background: rgba(59, 130, 246, 0.25);
+      background: rgba(59, 130, 246, 0.3);
     }
 
     main {
@@ -270,32 +284,6 @@
       background: rgba(255, 255, 255, 0.12);
     }
 
-    /* Mode Pill Selector */
-    .mode-selector {
-      display: flex;
-      background: rgba(0, 0, 0, 0.4);
-      padding: 4px;
-      border-radius: 12px;
-      border: 1px solid var(--card-border);
-    }
-
-    .mode-tab {
-      padding: 0.4rem 0.85rem;
-      border-radius: 8px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      cursor: pointer;
-      color: var(--text-muted);
-      border: none;
-      background: transparent;
-    }
-
-    .mode-tab.active {
-      background: #3b82f6;
-      color: white;
-      box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4);
-    }
-
     /* Right Sidebar */
     .side-panel {
       display: flex;
@@ -358,7 +346,7 @@
       align-items: center;
       justify-content: space-between;
       background: rgba(0, 0, 0, 0.4);
-      padding: 0.75rem 1rem;
+      padding: 0.85rem 1rem;
       border-radius: 12px;
       border: 1px solid var(--card-border);
       margin-bottom: 0.6rem;
@@ -369,24 +357,26 @@
       font-size: 0.92rem;
       color: #93c5fd;
       font-weight: 600;
+      word-break: break-all;
     }
 
     .copy-btn {
       background: rgba(59, 130, 246, 0.2);
       color: #93c5fd;
       border: 1px solid rgba(59, 130, 246, 0.4);
-      padding: 0.3rem 0.7rem;
+      padding: 0.35rem 0.75rem;
       border-radius: 8px;
       font-size: 0.75rem;
       font-weight: 600;
       cursor: pointer;
+      flex-shrink: 0;
+      margin-left: 0.5rem;
     }
 
     .copy-btn:hover {
       background: rgba(59, 130, 246, 0.4);
     }
 
-    /* Connected TVs List */
     .viewers-list {
       list-style: none;
       display: flex;
@@ -447,14 +437,13 @@
     <div class="header-actions">
       <div class="status-pill">
         <span class="dot" id="statusDot"></span>
-        <span id="statusText">Connecting to local hub...</span>
+        <span id="statusText">Connecting to Cloud WebRTC...</span>
       </div>
-      <a href="/tv" target="_blank" class="tv-mode-btn">Switch to TV Receiver</a>
+      <a href="/tv" target="_blank" class="tv-mode-btn">Open TV View</a>
     </div>
   </header>
 
   <main>
-    <!-- Left Screen Area -->
     <div class="preview-card">
       <div class="preview-header">
         <div>
@@ -463,12 +452,8 @@
         </div>
 
         <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <div class="mode-selector">
-            <button class="mode-tab active" id="modeRtcTab" onclick="switchStreamMode('webrtc')">⚡ WebRTC (60fps)</button>
-            <button class="mode-tab" id="modeCanvasTab" onclick="switchStreamMode('canvas')">📺 Universal TV</button>
-          </div>
           <div class="status-pill" id="liveBadge" style="display: none; background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #34d399;">
-            ● LIVE
+            ● BROADCASTING LIVE (WebRTC)
           </div>
         </div>
       </div>
@@ -483,7 +468,7 @@
             </svg>
           </div>
           <h3>Ready to Cast Screen to TV</h3>
-          <p>Share your Entire Screen, App Window, or Chrome Tab. Your TV will automatically mirror it in real-time like Google Meet.</p>
+          <p>Share your Entire Screen, App Window, or Chrome Tab. Your TV connects wirelessly with ultra-low latency like Google Meet.</p>
           <button class="btn-primary" onclick="startScreenShare()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
               <circle cx="12" cy="12" r="10"></circle>
@@ -514,7 +499,7 @@
           </button>
         </div>
 
-        <button class="btn-secondary" onclick="sendTvPing()">
+        <button class="btn-secondary" onclick="sendFlashPing()">
           🔔 Flash Test on TV
         </button>
       </div>
@@ -522,7 +507,6 @@
 
     <!-- Right Sidebar -->
     <div class="side-panel">
-      <!-- Easy Connect Details -->
       <div class="card card-accent">
         <div class="card-title">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.2">
@@ -538,21 +522,15 @@
         </div>
 
         <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">
-          Open TV Browser & Enter either URL:
+          Open TV Browser & Go To:
         </div>
 
         <div class="url-row">
-          <span class="url-text" id="urlPrimary">http://.../tv</span>
-          <button class="copy-btn" onclick="copyUrl('urlPrimary')">Copy</button>
-        </div>
-
-        <div class="url-row">
-          <span class="url-text" id="urlSecondary">http://...:3000/tv</span>
-          <button class="copy-btn" onclick="copyUrl('urlSecondary')">Copy</button>
+          <span class="url-text" id="tvDirectUrl">https://...</span>
+          <button class="copy-btn" onclick="copyDirectUrl()">Copy</button>
         </div>
       </div>
 
-      <!-- Live Connected TVs List -->
       <div class="card">
         <div class="card-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2">
@@ -571,27 +549,51 @@
         <ul class="viewers-list" id="viewersList" style="display: none;"></ul>
       </div>
 
-      <!-- Quick QR Scan -->
       <div class="card" style="text-align: center;">
-        <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.3rem;">Instant Mobile / TV Scan</h4>
-        <p style="font-size: 0.85rem; color: var(--text-muted);">Scan with camera to connect immediately:</p>
+        <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.3rem;">Instant QR Scan</h4>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Scan with camera to connect TV or phone immediately:</p>
         <div id="qrcode"></div>
       </div>
     </div>
   </main>
 
   <script>
-    let ws = null;
-    let localStream = null;
-    let peerConnections = new Map(); // viewerId -> RTCPeerConnection
-    let knownViewers = new Map(); // viewerId -> { ip, deviceName }
-    let currentMode = 'webrtc'; // 'webrtc' or 'canvas'
-    let canvasLoopActive = false;
-    let hiddenCanvas = document.createElement('canvas');
-    let hiddenCtx = hiddenCanvas.getContext('2d');
-    let currentRoomCode = '7777';
+    // Room code from URL param or default '7777'
+    const urlParams = new URLSearchParams(window.location.search);
+    let roomCode = urlParams.get('room') || '7777';
+    document.getElementById('roomCodeDisplay').innerText = roomCode;
 
-    const rtcConfig = {
+    // Build the TV URL dynamically using current origin (works on Vercel or localhost)
+    const currentOrigin = window.location.origin;
+    const tvUrl = `${currentOrigin}/tv?room=${roomCode}`;
+    document.getElementById('tvDirectUrl').innerText = tvUrl;
+
+    // Render QR Code
+    try {
+      new QRCode(document.getElementById('qrcode'), {
+        text: tvUrl,
+        width: 140,
+        height: 140,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    } catch (e) {
+      console.warn('QR error:', e);
+    }
+
+    function copyDirectUrl() {
+      navigator.clipboard.writeText(tvUrl);
+      alert('Copied URL: ' + tvUrl);
+    }
+
+    let peer = null;
+    let localStream = null;
+    let activeCalls = new Map(); // viewerPeerId -> call
+    let dataConnections = new Map(); // viewerPeerId -> conn
+    let knownViewers = new Map(); // viewerPeerId -> { deviceName, ip }
+
+    const rtcIceConfig = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
@@ -600,98 +602,77 @@
       ]
     };
 
-    async function initInfo() {
-      try {
-        const res = await fetch('/api/info');
-        const data = await res.json();
-        document.getElementById('urlPrimary').innerText = data.urls.tv;
-        document.getElementById('urlSecondary').innerText = data.urls.tv3000;
-        document.getElementById('roomCodeDisplay').innerText = data.activeCode;
-        currentRoomCode = data.activeCode;
+    function initPeerJS() {
+      const presenterPeerId = 'sachcast-host-' + roomCode;
+      
+      peer = new Peer(presenterPeerId, {
+        debug: 1,
+        config: rtcIceConfig
+      });
 
-        document.getElementById('qrcode').innerHTML = '';
-        new QRCode(document.getElementById('qrcode'), {
-          text: data.urls.tv,
-          width: 140,
-          height: 140,
-          colorDark: "#000000",
-          colorLight: "#ffffff",
-          correctLevel: QRCode.CorrectLevel.H
-        });
-      } catch (err) {
-        console.warn('Could not fetch server info:', err);
-      }
-    }
-
-    function copyUrl(elementId) {
-      const text = document.getElementById(elementId).innerText;
-      navigator.clipboard.writeText(text);
-      alert('Copied URL to clipboard: ' + text);
-    }
-
-    function connectSignaling() {
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${wsProtocol}//${window.location.host}`;
-      ws = new WebSocket(wsUrl);
-
-      ws.onopen = () => {
+      peer.on('open', (id) => {
         document.getElementById('statusDot').classList.add('live');
-        document.getElementById('statusText').innerText = 'Online (Hub Connected)';
-        ws.send(JSON.stringify({ type: 'register-presenter', code: currentRoomCode }));
-      };
+        document.getElementById('statusText').innerText = 'Online (Ready)';
+        console.log('[SachCast] Presenter peer opened:', id);
+      });
 
-      ws.onmessage = async (event) => {
-        if (typeof event.data !== 'string') return;
-        const msg = JSON.parse(event.data);
+      // Data connection from TV (for device info & ping)
+      peer.on('connection', (conn) => {
+        dataConnections.set(conn.peer, conn);
 
-        if (msg.type === 'room-created') {
-          currentRoomCode = msg.code;
-          document.getElementById('roomCodeDisplay').innerText = msg.code;
-          if (msg.viewers && msg.viewers.length > 0) {
-            msg.viewers.forEach(v => knownViewers.set(v.id, v));
-            renderViewersList();
-            if (localStream) connectAllViewers();
-          }
-        } else if (msg.type === 'viewer-joined') {
-          knownViewers.set(msg.id, { id: msg.id, ip: msg.ip, deviceName: msg.deviceName });
-          renderViewersList();
-          if (localStream) {
-            if (currentMode === 'webrtc') {
-              await setupPeerConnection(msg.id, true);
+        conn.on('data', (data) => {
+          if (data && data.type === 'hello') {
+            knownViewers.set(conn.peer, {
+              peerId: conn.peer,
+              deviceName: data.deviceName || 'Smart TV Viewer'
+            });
+            renderViewers();
+
+            // If we are already sharing screen, call the TV immediately!
+            if (localStream) {
+              callViewer(conn.peer);
             }
           }
-        } else if (msg.type === 'viewer-left') {
-          knownViewers.delete(msg.id);
-          if (peerConnections.has(msg.id)) {
-            peerConnections.get(msg.id).close();
-            peerConnections.delete(msg.id);
+        });
+
+        conn.on('close', () => {
+          dataConnections.delete(conn.peer);
+          knownViewers.delete(conn.peer);
+          if (activeCalls.has(conn.peer)) {
+            activeCalls.get(conn.peer).close();
+            activeCalls.delete(conn.peer);
           }
-          renderViewersList();
-        } else if (msg.type === 'answer') {
-          const pc = peerConnections.get(msg.from);
-          if (pc) {
-            await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-          }
-        } else if (msg.type === 'ice-candidate') {
-          const pc = peerConnections.get(msg.from);
-          if (pc && msg.candidate) {
-            try {
-              await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
-            } catch (err) {
-              console.error('Candidate error:', err);
-            }
-          }
+          renderViewers();
+        });
+      });
+
+      // Media call from TV (in case TV dials host directly)
+      peer.on('call', (call) => {
+        activeCalls.set(call.peer, call);
+        if (localStream) {
+          call.answer(localStream);
+        } else {
+          // Store call to answer when screen sharing starts
+          call.on('close', () => activeCalls.delete(call.peer));
         }
-      };
+      });
 
-      ws.onclose = () => {
-        document.getElementById('statusDot').classList.remove('live');
-        document.getElementById('statusText').innerText = 'Reconnecting...';
-        setTimeout(connectSignaling, 2000);
-      };
+      peer.on('error', (err) => {
+        console.warn('[SachCast] Peer error:', err.type, err.message);
+        if (err.type === 'unavailable-id') {
+          // If ID already taken, append timestamp
+          roomCode = Math.floor(1000 + Math.random() * 9000).toString();
+          document.getElementById('roomCodeDisplay').innerText = roomCode;
+          document.getElementById('tvDirectUrl').innerText = `${currentOrigin}/tv?room=${roomCode}`;
+          setTimeout(initPeerJS, 500);
+        } else {
+          document.getElementById('statusText').innerText = 'Reconnecting...';
+          setTimeout(initPeerJS, 3000);
+        }
+      });
     }
 
-    function renderViewersList() {
+    function renderViewers() {
       const list = document.getElementById('viewersList');
       const notice = document.getElementById('noViewersNotice');
       const count = knownViewers.size;
@@ -720,7 +701,7 @@
             </div>
             <div>
               <div style="font-weight: 700; font-size: 0.95rem;">${viewer.deviceName}</div>
-              <div style="font-size: 0.75rem; color: #94a3b8;">IP: ${viewer.ip}</div>
+              <div style="font-size: 0.75rem; color: #94a3b8;">Status: Connected</div>
             </div>
           </div>
           <span style="font-size: 0.8rem; color: #10b981; font-weight: 600;">● Active</span>
@@ -729,44 +710,17 @@
       });
     }
 
-    async function setupPeerConnection(viewerId, isInitiator) {
-      if (peerConnections.has(viewerId)) {
-        peerConnections.get(viewerId).close();
-      }
-
-      const pc = new RTCPeerConnection(rtcConfig);
-      peerConnections.set(viewerId, pc);
-
-      if (localStream) {
-        localStream.getTracks().forEach(track => {
-          pc.addTrack(track, localStream);
-        });
-      }
-
-      pc.onicecandidate = (event) => {
-        if (event.candidate && ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({
-            type: 'ice-candidate',
-            target: viewerId,
-            candidate: event.candidate
-          }));
-        }
-      };
-
-      if (isInitiator) {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        ws.send(JSON.stringify({
-          type: 'offer',
-          target: viewerId,
-          sdp: pc.localDescription
-        }));
-      }
+    function callViewer(viewerPeerId) {
+      if (!peer || !localStream) return;
+      const call = peer.call(viewerPeerId, localStream);
+      activeCalls.set(viewerPeerId, call);
+      call.on('close', () => activeCalls.delete(viewerPeerId));
     }
 
-    async function connectAllViewers() {
-      for (const [viewerId, _] of knownViewers) {
-        await setupPeerConnection(viewerId, true);
+    function callAllViewers() {
+      if (!peer || !localStream) return;
+      for (const [viewerPeerId, _] of knownViewers) {
+        callViewer(viewerPeerId);
       }
     }
 
@@ -794,11 +748,8 @@
         document.getElementById('stopBtn').style.display = 'inline-flex';
         document.getElementById('liveBadge').style.display = 'inline-flex';
 
-        if (currentMode === 'webrtc') {
-          await connectAllViewers();
-        } else {
-          startCanvasBroadcasting();
-        }
+        // Connect all TVs immediately
+        callAllViewers();
 
         localStream.getVideoTracks()[0].onended = () => {
           stopScreenShare();
@@ -815,77 +766,31 @@
         localStream = null;
       }
 
-      canvasLoopActive = false;
       document.getElementById('localVideo').style.display = 'none';
       document.getElementById('emptyState').style.display = 'block';
       document.getElementById('startBtn').style.display = 'inline-flex';
       document.getElementById('stopBtn').style.display = 'none';
       document.getElementById('liveBadge').style.display = 'none';
 
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'stream-stopped' }));
-      }
+      // Notify viewers
+      dataConnections.forEach((conn) => {
+        if (conn.open) conn.send({ type: 'stream-stopped' });
+      });
     }
 
-    function switchStreamMode(mode) {
-      currentMode = mode;
-      document.getElementById('modeRtcTab').classList.toggle('active', mode === 'webrtc');
-      document.getElementById('modeCanvasTab').classList.toggle('active', mode === 'canvas');
-
-      if (localStream) {
-        if (mode === 'webrtc') {
-          canvasLoopActive = false;
-          connectAllViewers();
-        } else {
-          startCanvasBroadcasting();
+    function sendFlashPing() {
+      let sent = 0;
+      dataConnections.forEach((conn) => {
+        if (conn.open) {
+          conn.send({ type: 'flash-ping' });
+          sent++;
         }
-      }
-
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'mode-changed', mode: mode }));
-      }
+      });
+      alert(sent > 0 ? `Sent test flash to ${sent} connected TV(s)!` : 'No TVs connected yet.');
     }
 
-    // Universal Mode: captures canvas frames and relays binary WebP/JPEG over WebSocket
-    function startCanvasBroadcasting() {
-      if (canvasLoopActive) return;
-      canvasLoopActive = true;
-
-      function renderFrame() {
-        if (!canvasLoopActive || !localStream) return;
-        const video = document.getElementById('localVideo');
-        if (video.videoWidth > 0) {
-          hiddenCanvas.width = video.videoWidth;
-          hiddenCanvas.height = video.videoHeight;
-          hiddenCtx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
-
-          hiddenCanvas.toBlob((blob) => {
-            if (blob && ws && ws.readyState === WebSocket.OPEN) {
-              blob.arrayBuffer().then((buf) => {
-                ws.send(buf);
-              });
-            }
-            if (canvasLoopActive) {
-              setTimeout(renderFrame, 33); // 30 FPS smooth transmission
-            }
-          }, 'image/jpeg', 0.8);
-        } else {
-          setTimeout(renderFrame, 100);
-        }
-      }
-
-      renderFrame();
-    }
-
-    function sendTvPing() {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'tv-ping' }));
-        alert('Sent flash alert to all connected TVs!');
-      }
-    }
-
-    initInfo();
-    connectSignaling();
+    // Launch PeerJS
+    initPeerJS();
   </script>
 </body>
 </html>

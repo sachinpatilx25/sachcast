@@ -7,6 +7,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+  <!-- PeerJS for serverless WebRTC -->
+  <script src="/peerjs.min.js"></script>
+  <script>
+    if (typeof Peer === 'undefined') {
+      document.write('<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"><\/script>');
+    }
+  </script>
+
   <style>
     * {
       box-sizing: border-box;
@@ -26,7 +34,6 @@
       justify-content: center;
     }
 
-    /* Screen Display Containers */
     #displayContainer {
       position: absolute;
       inset: 0;
@@ -45,13 +52,6 @@
       object-fit: contain;
     }
 
-    canvas {
-      width: 100vw;
-      height: 100vh;
-      object-fit: contain;
-      display: none;
-    }
-
     /* Standby overlay */
     #standbyScreen {
       position: absolute;
@@ -68,14 +68,14 @@
     }
 
     .radar-icon {
-      width: 100px;
-      height: 100px;
+      width: 96px;
+      height: 96px;
       border-radius: 50%;
       background: linear-gradient(135deg, #3b82f6, #6366f1);
       display: grid;
       place-items: center;
       box-shadow: 0 0 50px rgba(59, 130, 246, 0.7);
-      margin-bottom: 2rem;
+      margin-bottom: 1.85rem;
       animation: float 3s ease-in-out infinite;
     }
 
@@ -93,21 +93,65 @@
 
     p {
       color: #94a3b8;
-      font-size: 1.3rem;
-      max-width: 700px;
+      font-size: 1.25rem;
+      max-width: 650px;
       line-height: 1.6;
       margin-bottom: 2rem;
+    }
+
+    /* 4-digit code quick switch */
+    .code-box-wrapper {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 18px;
+      padding: 1rem 1.8rem;
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      backdrop-filter: blur(12px);
+      margin-bottom: 1.5rem;
+    }
+
+    .code-input {
+      background: rgba(0, 0, 0, 0.4);
+      border: 2px solid #3b82f6;
+      border-radius: 12px;
+      color: #60a5fa;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.8rem;
+      letter-spacing: 0.25em;
+      text-align: center;
+      width: 150px;
+      padding: 0.4rem;
+      outline: none;
+    }
+
+    .connect-btn {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 0.75rem 1.5rem;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.5);
+    }
+
+    .connect-btn:hover {
+      background: #2563eb;
     }
 
     .status-badge {
       display: inline-flex;
       align-items: center;
       gap: 0.75rem;
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       color: #34d399;
       background: rgba(16, 185, 129, 0.12);
       border: 1px solid rgba(16, 185, 129, 0.35);
-      padding: 0.65rem 1.6rem;
+      padding: 0.6rem 1.5rem;
       border-radius: 9999px;
       font-weight: 700;
     }
@@ -120,7 +164,6 @@
       box-shadow: 0 0 12px #10b981;
     }
 
-    /* TV HUD */
     .tv-hud {
       position: absolute;
       top: 1.75rem;
@@ -155,17 +198,15 @@
       border-color: #3b82f6;
     }
 
-    /* Flash ping alert */
     #flashOverlay {
       position: absolute;
       inset: 0;
-      background: rgba(59, 130, 246, 0.4);
+      background: rgba(59, 130, 246, 0.45);
       z-index: 40;
       pointer-events: none;
       display: none;
     }
 
-    /* Audio alert prompt */
     #audioPrompt {
       display: none;
       position: absolute;
@@ -177,7 +218,7 @@
       z-index: 30;
       box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7);
       cursor: pointer;
-      font-size: 1.2rem;
+      font-size: 1.15rem;
       font-weight: 600;
     }
   </style>
@@ -186,13 +227,12 @@
   <div id="flashOverlay"></div>
 
   <div class="tv-hud">
-    <button class="hud-btn" id="streamModeBtn" onclick="toggleEngineMode()">Engine: WebRTC 60fps</button>
     <button class="hud-btn" onclick="toggleFullScreen()">⛶ Fullscreen</button>
   </div>
 
   <div id="standbyScreen">
     <div class="radar-icon">
-      <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
         <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
         <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
         <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
@@ -200,44 +240,50 @@
       </svg>
     </div>
 
-    <h1 id="screenTitle">Connected to SachCast</h1>
-    <p id="screenSubtitle">Paired with PC. Waiting for you to click "Share Screen" on your computer...</p>
+    <h1 id="screenTitle">SachCast TV Receiver</h1>
+    <p id="screenSubtitle">Connecting to PC screen. Please wait...</p>
+
+    <!-- TV Code Box -->
+    <div class="code-box-wrapper">
+      <input type="text" id="manualCode" class="code-input" maxlength="4" value="7777">
+      <button class="connect-btn" onclick="applyManualCode()">Connect Code</button>
+    </div>
 
     <div class="status-badge" id="statusBadge">
-      <div class="indicator-dot"></div>
-      <span id="statusLabel">Ready & Waiting for Screen</span>
+      <div class="indicator-dot" id="statusDot"></div>
+      <span id="statusLabel">Initializing WebRTC...</span>
     </div>
   </div>
 
   <div id="displayContainer">
     <video id="tvVideo" autoplay playsinline></video>
-    <canvas id="tvCanvas"></canvas>
   </div>
 
   <div id="audioPrompt" onclick="enableAudio()">
-    🔊 Audio muted by TV browser. Click anywhere or press Remote OK to unmute!
+    🔊 Audio muted by TV browser. Press Remote OK or click anywhere to unmute!
   </div>
 
   <script>
     const tvVideo = document.getElementById('tvVideo');
-    const tvCanvas = document.getElementById('tvCanvas');
-    const canvasCtx = tvCanvas.getContext('2d');
     const standbyScreen = document.getElementById('standbyScreen');
     const screenTitle = document.getElementById('screenTitle');
     const screenSubtitle = document.getElementById('screenSubtitle');
     const statusLabel = document.getElementById('statusLabel');
+    const statusDot = document.getElementById('statusDot');
     const audioPrompt = document.getElementById('audioPrompt');
     const flashOverlay = document.getElementById('flashOverlay');
-    const streamModeBtn = document.getElementById('streamModeBtn');
+    const manualCodeInput = document.getElementById('manualCode');
 
-    let ws = null;
-    let pc = null;
-    let presenterId = null;
-    let pendingCandidates = [];
-    let activeEngine = 'webrtc'; // 'webrtc' or 'canvas'
-    let currentRoomCode = null;
+    // Parse room code from URL: ?room=7777
+    const urlParams = new URLSearchParams(window.location.search);
+    let roomCode = urlParams.get('room') || '7777';
+    manualCodeInput.value = roomCode;
 
-    const rtcConfig = {
+    let peer = null;
+    let dataConn = null;
+    let retryInterval = null;
+
+    const rtcIceConfig = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
@@ -246,135 +292,90 @@
       ]
     };
 
-    function connectSignaling() {
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${wsProtocol}//${window.location.host}`;
-      ws = new WebSocket(wsUrl);
-
-      ws.onopen = () => {
-        statusLabel.innerText = 'Connected to Wi-Fi Hub';
-        ws.send(JSON.stringify({ type: 'register-viewer', code: currentRoomCode }));
-      };
-
-      ws.onmessage = async (event) => {
-        // 1. Binary frames = Universal Canvas Streaming
-        if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
-          handleBinaryCanvasFrame(event.data);
-          return;
-        }
-
-        // 2. JSON control messages
-        try {
-          const msg = JSON.parse(event.data);
-
-          if (msg.type === 'join-success') {
-            currentRoomCode = msg.code;
-            presenterId = msg.presenterId;
-            if (msg.hasPresenter) {
-              screenTitle.innerText = 'Paired With PC!';
-              screenSubtitle.innerText = 'Ready! Click "Share Screen" on your PC to broadcast.';
-              statusLabel.innerText = 'Paired with PC Studio';
-            }
-          } else if (msg.type === 'presenter-connected') {
-            presenterId = msg.presenterId;
-            screenTitle.innerText = 'PC Connected!';
-            screenSubtitle.innerText = 'Click "Share Screen" on your computer to start mirroring.';
-            statusLabel.innerText = 'PC Ready';
-          } else if (msg.type === 'offer') {
-            presenterId = msg.from;
-            await handleOffer(msg.sdp);
-          } else if (msg.type === 'ice-candidate') {
-            if (msg.candidate) {
-              if (pc && pc.remoteDescription && pc.remoteDescription.type) {
-                try {
-                  await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
-                } catch (e) {}
-              } else {
-                pendingCandidates.push(msg.candidate);
-              }
-            }
-          } else if (msg.type === 'tv-ping') {
-            flashScreen();
-          } else if (msg.type === 'stream-stopped' || msg.type === 'presenter-disconnected') {
-            showStandby('Broadcast Ended', 'Waiting for PC to resume sharing...');
-          }
-        } catch (err) {
-          console.warn('Error parsing message:', err);
-        }
-      };
-
-      ws.onclose = () => {
-        statusLabel.innerText = 'Reconnecting to PC...';
-        setTimeout(connectSignaling, 2000);
-      };
+    function parseDeviceName() {
+      const ua = (navigator.userAgent || '').toLowerCase();
+      if (ua.includes('tizen')) return 'Samsung Smart TV';
+      if (ua.includes('webos')) return 'LG webOS TV';
+      if (ua.includes('googletv') || ua.includes('crkey')) return 'Google TV';
+      if (ua.includes('firetv') || ua.includes('aft')) return 'Amazon Fire TV';
+      if (ua.includes('apple') && ua.includes('appletv')) return 'Apple TV';
+      if (ua.includes('android')) return 'Android TV';
+      return 'Smart TV Browser';
     }
 
-    async function handleOffer(sdp) {
-      if (pc) pc.close();
-      pc = new RTCPeerConnection(rtcConfig);
-
-      pc.ontrack = (event) => {
-        hideStandby();
-        tvVideo.style.display = 'block';
-        tvCanvas.style.display = 'none';
-        activeEngine = 'webrtc';
-        streamModeBtn.innerText = 'Engine: WebRTC 60fps';
-
-        tvVideo.srcObject = event.streams[0];
-        tvVideo.play().catch(() => {
-          audioPrompt.style.display = 'block';
-        });
-      };
-
-      pc.onicecandidate = (event) => {
-        if (event.candidate && ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({
-            type: 'ice-candidate',
-            target: presenterId,
-            candidate: event.candidate
-          }));
-        }
-      };
-
-      await pc.setRemoteDescription(new RTCSessionDescription(sdp));
-
-      while (pendingCandidates.length > 0) {
-        const cand = pendingCandidates.shift();
-        try {
-          await pc.addIceCandidate(new RTCIceCandidate(cand));
-        } catch (e) {}
+    function initTVPeer() {
+      if (peer) {
+        try { peer.destroy(); } catch (e) {}
       }
 
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
+      const viewerPeerId = 'sachcast-tv-' + roomCode + '-' + Math.random().toString(36).substring(2, 7);
+      
+      peer = new Peer(viewerPeerId, {
+        debug: 1,
+        config: rtcIceConfig
+      });
 
-      ws.send(JSON.stringify({
-        type: 'answer',
-        target: presenterId,
-        sdp: pc.localDescription
-      }));
+      peer.on('open', (id) => {
+        statusDot.style.background = '#10b981';
+        statusLabel.innerText = 'Connected to Cloud. Pairing with PC...';
+        connectToHost();
+      });
+
+      // Presenter calls TV with screen stream
+      peer.on('call', (call) => {
+        call.answer(); // TV answers without video
+        call.on('stream', (remoteStream) => {
+          hideStandby();
+          tvVideo.srcObject = remoteStream;
+          tvVideo.play().catch(() => {
+            audioPrompt.style.display = 'block';
+          });
+        });
+      });
+
+      peer.on('error', (err) => {
+        console.warn('TV Peer error:', err.type, err.message);
+        statusLabel.innerText = 'Retrying connection...';
+      });
     }
 
-    // Universal Mode: handles raw JPEG/WebP binary frames from PC
-    function handleBinaryCanvasFrame(data) {
-      hideStandby();
-      tvVideo.style.display = 'none';
-      tvCanvas.style.display = 'block';
-      activeEngine = 'canvas';
-      streamModeBtn.innerText = 'Engine: Universal Canvas';
+    function connectToHost() {
+      if (!peer || peer.destroyed) return;
+      const hostPeerId = 'sachcast-host-' + roomCode;
 
-      const blob = data instanceof Blob ? data : new Blob([data], { type: 'image/jpeg' });
-      const imgUrl = URL.createObjectURL(blob);
-      const img = new Image();
-      img.onload = () => {
-        if (tvCanvas.width !== img.width || tvCanvas.height !== img.height) {
-          tvCanvas.width = img.width;
-          tvCanvas.height = img.height;
+      if (dataConn) {
+        try { dataConn.close(); } catch (e) {}
+      }
+
+      dataConn = peer.connect(hostPeerId);
+
+      dataConn.on('open', () => {
+        statusLabel.innerText = 'Paired With PC! Waiting for screen share...';
+        screenTitle.innerText = 'Paired with PC Studio!';
+        screenSubtitle.innerText = 'Ready! Click "Share Screen" on your computer to broadcast.';
+        dataConn.send({ type: 'hello', deviceName: parseDeviceName() });
+      });
+
+      dataConn.on('data', (data) => {
+        if (data && data.type === 'flash-ping') {
+          flashScreen();
+        } else if (data && data.type === 'stream-stopped') {
+          showStandby('Broadcast Ended', 'Waiting for PC to resume sharing...');
         }
-        canvasCtx.drawImage(img, 0, 0);
-        URL.revokeObjectURL(imgUrl);
-      };
-      img.src = imgUrl;
+      });
+
+      dataConn.on('close', () => {
+        statusLabel.innerText = 'Waiting for PC Studio...';
+      });
+    }
+
+    function applyManualCode() {
+      const code = manualCodeInput.value.trim();
+      if (code.length >= 4) {
+        roomCode = code;
+        statusLabel.innerText = `Connecting to Code [ ${code} ]...`;
+        initTVPeer();
+      }
     }
 
     function hideStandby() {
@@ -390,8 +391,6 @@
       screenTitle.innerText = title;
       screenSubtitle.innerText = sub;
       tvVideo.srcObject = null;
-      tvVideo.style.display = 'none';
-      tvCanvas.style.display = 'none';
     }
 
     function flashScreen() {
@@ -413,16 +412,15 @@
       }
     }
 
-    function toggleEngineMode() {
-      // Allow TV user to switch preference
-      alert('Active Streaming Engine: ' + (activeEngine === 'webrtc' ? 'WebRTC 60fps Ultra Low Latency' : 'Universal Canvas Stream'));
-    }
-
-    // TV Remote OK / Enter / Click triggers fullscreen & unmutes audio automatically
+    // Remote control buttons
     window.addEventListener('keydown', (e) => {
       enableAudio();
-      if (e.key === 'Enter' || e.key === 'f' || e.key === 'F') {
-        toggleFullScreen();
+      if (e.key === 'Enter') {
+        if (standbyScreen.style.display !== 'none' && document.activeElement === manualCodeInput) {
+          applyManualCode();
+        } else {
+          toggleFullScreen();
+        }
       }
     });
 
@@ -430,7 +428,14 @@
       enableAudio();
     });
 
-    connectSignaling();
+    // Re-verify host pairing every 5 seconds if waiting
+    setInterval(() => {
+      if (!dataConn || !dataConn.open) {
+        connectToHost();
+      }
+    }, 5000);
+
+    initTVPeer();
   </script>
 </body>
 </html>

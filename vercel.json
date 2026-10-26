@@ -1,0 +1,8 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/tv", "destination": "/tv.html" },
+    { "source": "/tv/", "destination": "/tv.html" },
+    { "source": "/viewer", "destination": "/tv.html" }
+  ]
+}
