@@ -2,12 +2,10 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const crypto = require('crypto');
+const WebSocket = require('ws');
 
-// Port 80 allows TV users to just type IP without ':3000', with fallback to 3000
-const PREFERRED_PORT = 80;
-const FALLBACK_PORT = 3000;
-let CURRENT_PORT = PREFERRED_PORT;
+const PRIMARY_PORT = 80;
+const SECONDARY_PORT = 3000;
 
 function getLocalIpAddresses() {
   const interfaces = os.networkInterfaces();
@@ -22,295 +20,83 @@ function getLocalIpAddresses() {
   return addresses;
 }
 
-// In-memory Room & Pairing code management
-const pairingRooms = new Map(); // code -> { presenter: client, viewers: Set<client> }
-
-function generatePairingCode() {
-  let code = '';
-  for (let i = 0; i < 4; i++) {
-    code += Math.floor(Math.random() * 10).toString();
-  }
-  return code;
-}
-
-// Lightweight WebSocket server implementation without third-party dependencies
-class SimpleWebSocketServer {
-  constructor(server) {
-    this.clients = new Set();
-    server.on('upgrade', (req, socket, head) => {
-      this.handleUpgrade(req, socket, head);
-    });
-  }
-
-  handleUpgrade(req, socket, head) {
-    const key = req.headers['sec-websocket-key'];
-    if (!key) {
-      socket.destroy();
-      return;
-    }
-
-    const acceptKey = crypto
-      .createHash('sha1')
-      .update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')
-      .digest('base64');
-
-    const headers = [
-      'HTTP/1.1 101 Switching Protocols',
-      'Upgrade: websocket',
-      'Connection: Upgrade',
-      `Sec-WebSocket-Accept: ${acceptKey}`,
-      '\r\n'
-    ];
-
-    socket.write(headers.join('\r\n'));
-
-    const client = {
-      socket,
-      id: Math.random().toString(36).substring(2, 9),
-      role: 'unknown',
-      roomCode: null
-    };
-
-    this.clients.add(client);
-
-    let buffer = Buffer.alloc(0);
-
-    socket.on('data', (chunk) => {
-      buffer = Buffer.concat([buffer, chunk]);
-      while (buffer.length >= 2) {
-        const firstByte = buffer[0];
-        const secondByte = buffer[1];
-        const opcode = firstByte & 0x0f;
-        const isMasked = (secondByte & 0x80) !== 0;
-        let payloadLen = secondByte & 0x7f;
-        let offset = 2;
-
-        if (payloadLen === 126) {
-          if (buffer.length < 4) break;
-          payloadLen = buffer.readUInt16BE(2);
-          offset = 4;
-        } else if (payloadLen === 127) {
-          if (buffer.length < 10) break;
-          payloadLen = Number(buffer.readBigUInt64BE(2));
-          offset = 10;
-        }
-
-        const maskKeyLen = isMasked ? 4 : 0;
-        if (buffer.length < offset + maskKeyLen + payloadLen) {
-          break;
-        }
-
-        let mask = null;
-        if (isMasked) {
-          mask = buffer.subarray(offset, offset + 4);
-          offset += 4;
-        }
-
-        const payload = buffer.subarray(offset, offset + payloadLen);
-        buffer = buffer.subarray(offset + payloadLen);
-
-        if (isMasked && mask) {
-          for (let i = 0; i < payload.length; i++) {
-            payload[i] ^= mask[i % 4];
-          }
-        }
-
-        if (opcode === 0x8) {
-          // Close frame
-          socket.end();
-          this.removeClient(client);
-          return;
-        } else if (opcode === 0x9) {
-          // Ping -> Pong
-          this.sendFrame(socket, 0xa, payload);
-        } else if (opcode === 0x1) {
-          // Text frame
-          const str = payload.toString('utf8');
-          this.handleMessage(client, str);
-        }
-      }
-    });
-
-    socket.on('close', () => {
-      this.removeClient(client);
-    });
-
-    socket.on('error', (err) => {
-      console.warn('Socket error on client', client.id, err.message);
-      this.removeClient(client);
-    });
-
-    this.send(client, { type: 'welcome', id: client.id });
-  }
-
-  removeClient(client) {
-    this.clients.delete(client);
-    if (client.roomCode && pairingRooms.has(client.roomCode)) {
-      const room = pairingRooms.get(client.roomCode);
-      if (room.presenter === client) {
-        console.log(`[-] Presenter left room [ ${client.roomCode} ]`);
-        for (const viewer of room.viewers) {
-          this.send(viewer, { type: 'presenter-left' });
-        }
-        pairingRooms.delete(client.roomCode);
-      } else {
-        room.viewers.delete(client);
-        console.log(`[-] TV viewer left room [ ${client.roomCode} ]`);
-        if (room.presenter) {
-          this.send(room.presenter, { type: 'viewer-left', id: client.id, viewersCount: room.viewers.size });
-        }
-      }
-    }
-  }
-
-  handleMessage(sender, rawStr) {
-    try {
-      const data = JSON.parse(rawStr);
-
-      // Presenter registers
-      if (data.type === 'register-presenter') {
-        sender.role = 'presenter';
-        let code = data.code || generatePairingCode();
-        while (pairingRooms.has(code) && pairingRooms.get(code).presenter !== sender) {
-          code = generatePairingCode();
-        }
-        sender.roomCode = code;
-
-        // Check if there was an existing room with viewers or create fresh
-        const existingRoom = pairingRooms.get(code);
-        const viewers = existingRoom ? existingRoom.viewers : new Set();
-        pairingRooms.set(code, { presenter: sender, viewers });
-
-        console.log(`[+] Presenter created / restored Room: [ ${code} ]`);
-        this.send(sender, { type: 'room-created', code: code });
-
-        // If viewers are already in the room, notify presenter and viewers to link
-        for (const viewer of viewers) {
-          this.send(viewer, { type: 'join-success', code: code, presenterId: sender.id });
-          this.send(sender, { type: 'viewer-joined', id: viewer.id, viewersCount: viewers.size });
-        }
-        return;
-      }
-
-      // Viewer registers
-      if (data.type === 'register-viewer') {
-        sender.role = 'viewer';
-        let targetCode = data.code;
-
-        // Auto-join if there is only 1 room active, or if code isn't passed
-        if (!targetCode && pairingRooms.size > 0) {
-          targetCode = pairingRooms.keys().next().value;
-        }
-
-        if (targetCode && pairingRooms.has(targetCode)) {
-          const room = pairingRooms.get(targetCode);
-          sender.roomCode = targetCode;
-          room.viewers.add(sender);
-
-          this.send(sender, { type: 'join-success', code: targetCode, presenterId: room.presenter ? room.presenter.id : null });
-          if (room.presenter) {
-            this.send(room.presenter, { type: 'viewer-joined', id: sender.id, viewersCount: room.viewers.size });
-          }
-          console.log(`[+] TV viewer connected to room [ ${targetCode} ]`);
-        } else {
-          // Put viewer into a default pending room or wait for presenter
-          let defaultRoomCode = pairingRooms.keys().next().value;
-          if (defaultRoomCode) {
-            const room = pairingRooms.get(defaultRoomCode);
-            sender.roomCode = defaultRoomCode;
-            room.viewers.add(sender);
-            this.send(sender, { type: 'join-success', code: defaultRoomCode, presenterId: room.presenter ? room.presenter.id : null });
-            if (room.presenter) {
-              this.send(room.presenter, { type: 'viewer-joined', id: sender.id, viewersCount: room.viewers.size });
-            }
-          } else {
-            this.send(sender, { type: 'waiting-for-stream', availableRooms: Array.from(pairingRooms.keys()) });
-          }
-        }
-        return;
-      }
-
-      // Direct WebRTC signaling forwarding between PC and TV
-      if (data.target) {
-        for (const client of this.clients) {
-          if (client.id === data.target) {
-            this.send(client, { ...data, from: sender.id });
-            break;
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Error handling message:', err);
-    }
-  }
-
-  send(client, obj) {
-    if (client && client.socket && client.socket.writable) {
-      const payload = Buffer.from(JSON.stringify(obj), 'utf8');
-      this.sendFrame(client.socket, 0x1, payload);
-    }
-  }
-
-  sendFrame(socket, opcode, payload) {
-    let header;
-    const len = payload.length;
-
-    if (len < 126) {
-      header = Buffer.alloc(2);
-      header[0] = 0x80 | opcode;
-      header[1] = len;
-    } else if (len <= 0xffff) {
-      header = Buffer.alloc(4);
-      header[0] = 0x80 | opcode;
-      header[1] = 126;
-      header.writeUInt16BE(len, 2);
-    } else {
-      header = Buffer.alloc(10);
-      header[0] = 0x80 | opcode;
-      header[1] = 127;
-      header.writeBigUInt64BE(BigInt(len), 2);
-    }
-
-    socket.write(Buffer.concat([header, payload]));
-  }
-}
-
-// HTTP Static File Server
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.png': 'image/png',
-  '.svg': 'image/svg+xml'
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon'
 };
 
-const server = http.createServer((req, res) => {
-  let reqPath = req.url.split('?')[0];
+// Rooms state: code -> { presenter: wsClient, viewers: Set<wsClient> }
+const rooms = new Map();
+let defaultRoomCode = '7777';
 
-  // API endpoint
+function generateCode() {
+  return Math.floor(1000 + Math.random() * 9000).toString();
+}
+
+function parseDeviceName(userAgent = '') {
+  const ua = userAgent.toLowerCase();
+  if (ua.includes('tizen')) return 'Samsung Smart TV';
+  if (ua.includes('webos')) return 'LG webOS Smart TV';
+  if (ua.includes('googletv') || ua.includes('crkey')) return 'Google TV / Chromecast';
+  if (ua.includes('firetv') || ua.includes('aft')) return 'Amazon Fire TV';
+  if (ua.includes('apple') && ua.includes('appletv')) return 'Apple TV';
+  if (ua.includes('android')) return 'Android TV / Mobile';
+  if (ua.includes('iphone') || ua.includes('ipad')) return 'iPhone / iPad';
+  if (ua.includes('windows')) return 'Windows PC / TV';
+  if (ua.includes('macintosh')) return 'Mac';
+  if (ua.includes('smart-tv') || ua.includes('smarttv') || ua.includes('tv')) return 'Smart TV Device';
+  return 'Web Browser TV';
+}
+
+function handleHttpRequest(req, res) {
+  let reqPath = req.url.split('?')[0];
+  const userAgent = (req.headers['user-agent'] || '').toLowerCase();
+  const clientIp = req.socket.remoteAddress ? req.socket.remoteAddress.replace(/^.*:/, '') : 'Unknown';
+
+  // API endpoint for dynamic configuration
   if (reqPath === '/api/info') {
     const ips = getLocalIpAddresses();
-    const primaryIp = ips[0] ? ips[0].ip : 'localhost';
-    const activeCode = pairingRooms.keys().next().value || null;
+    const primaryIp = ips[0] ? ips[0].ip : '127.0.0.1';
+    const activeCode = rooms.keys().next().value || defaultRoomCode;
+
     res.writeHead(200, {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*'
     });
     res.end(JSON.stringify({
       ip: primaryIp,
-      port: CURRENT_PORT,
-      code: activeCode,
-      tvUrl: CURRENT_PORT === 80 ? `http://${primaryIp}/tv` : `http://${primaryIp}:${CURRENT_PORT}/tv`
+      ips: ips.map(i => i.ip),
+      portPrimary: PRIMARY_PORT,
+      portSecondary: SECONDARY_PORT,
+      activeCode,
+      clientIp,
+      urls: {
+        short: `http://${primaryIp}`,
+        short3000: `http://${primaryIp}:${SECONDARY_PORT}`,
+        tv: `http://${primaryIp}/tv`,
+        tv3000: `http://${primaryIp}:${SECONDARY_PORT}/tv`
+      }
     }));
     return;
   }
 
-  // Friendly TV endpoints
-  if (reqPath === '/tv' || reqPath === '/t' || reqPath === '/tv.html') {
+  // Health check
+  if (reqPath === '/ping') {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('pong');
+    return;
+  }
+
+  // TV clean routing
+  if (reqPath === '/tv' || reqPath === '/t' || reqPath === '/tv.html' || reqPath === '/viewer') {
     reqPath = '/tv.html';
   } else if (reqPath === '/' || reqPath === '') {
-    const userAgent = (req.headers['user-agent'] || '').toLowerCase();
+    // If request comes from a TV browser user agent, automatically route to TV view!
     const isTV = userAgent.includes('smart-tv') ||
                  userAgent.includes('smarttv') ||
                  userAgent.includes('tizen') ||
@@ -345,36 +131,245 @@ const server = http.createServer((req, res) => {
       res.end(content);
     }
   });
-});
+}
 
-const wsServer = new SimpleWebSocketServer(server);
+// Global WebSocket setup
+const allClients = new Set();
 
-function startServer(port) {
-  server.listen(port, '0.0.0.0', () => {
-    CURRENT_PORT = port;
-    const ips = getLocalIpAddresses();
-    const primaryIp = ips[0] ? ips[0].ip : '127.0.0.1';
-    const portStr = port === 80 ? '' : `:${port}`;
+function setupWebSocket(wss) {
+  wss.on('connection', (ws, req) => {
+    const clientIp = req.socket.remoteAddress ? req.socket.remoteAddress.replace(/^.*:/, '') : 'Unknown';
+    const userAgent = req.headers['user-agent'] || '';
+    const deviceName = parseDeviceName(userAgent);
 
-    console.log('\n========================================================');
-    console.log('   🚀 AIRCAST - SUPER EASY PC TO TV BROADCAST');
-    console.log('========================================================\n');
-    console.log(`  1. PC Presenter (Share Screen):`);
-    console.log(`     👉 http://localhost${portStr}`);
-    console.log(`\n  2. TV Browser (Smart TV / FireStick):`);
-    console.log(`     👉 http://${primaryIp}${portStr}/tv`);
-    console.log(`     (Or http://${primaryIp}${portStr} - Auto TV detection)`);
-    console.log('\n========================================================\n');
-  }).on('error', (err) => {
-    if (err.code === 'EACCES' || err.code === 'EADDRINUSE') {
-      if (port !== FALLBACK_PORT) {
-        console.log(`Port ${port} not available/requires admin. Switching to port ${FALLBACK_PORT}...`);
-        startServer(FALLBACK_PORT);
-      } else {
-        console.error('Failed to start server:', err);
+    ws.id = Math.random().toString(36).substring(2, 9);
+    ws.ip = clientIp;
+    ws.deviceName = deviceName;
+    ws.role = 'unknown';
+    ws.roomCode = null;
+    ws.isAlive = true;
+
+    allClients.add(ws);
+
+    ws.on('pong', () => {
+      ws.isAlive = true;
+    });
+
+    ws.on('message', (message, isBinary) => {
+      // Handle binary stream frames (Universal Canvas Fallback Mode)
+      if (isBinary) {
+        if (ws.roomCode && rooms.has(ws.roomCode)) {
+          const room = rooms.get(ws.roomCode);
+          if (ws === room.presenter) {
+            // Forward binary video/audio frame directly to all viewers in room
+            for (const viewer of room.viewers) {
+              if (viewer.readyState === WebSocket.OPEN) {
+                viewer.send(message, { binary: true });
+              }
+            }
+          }
+        }
+        return;
       }
-    }
+
+      // Handle JSON text messages
+      try {
+        const data = JSON.parse(message.toString('utf8'));
+
+        // Presenter registers
+        if (data.type === 'register-presenter') {
+          ws.role = 'presenter';
+          let code = data.code || defaultRoomCode;
+          ws.roomCode = code;
+
+          const existingRoom = rooms.get(code);
+          const viewers = existingRoom ? existingRoom.viewers : new Set();
+          rooms.set(code, { presenter: ws, viewers });
+
+          console.log(`[+] Presenter connected. Room: [ ${code} ] from ${clientIp}`);
+
+          safeSend(ws, {
+            type: 'room-created',
+            code,
+            viewers: Array.from(viewers).map(v => ({ id: v.id, ip: v.ip, deviceName: v.deviceName }))
+          });
+
+          // Notify any waiting viewers that presenter is now ready
+          for (const viewer of viewers) {
+            safeSend(viewer, {
+              type: 'presenter-connected',
+              presenterId: ws.id,
+              code
+            });
+            safeSend(ws, {
+              type: 'viewer-joined',
+              id: viewer.id,
+              ip: viewer.ip,
+              deviceName: viewer.deviceName,
+              viewersCount: viewers.size
+            });
+          }
+          return;
+        }
+
+        // Viewer (Smart TV) registers
+        if (data.type === 'register-viewer') {
+          ws.role = 'viewer';
+          let targetCode = data.code;
+
+          // Auto-join existing room if no code specified
+          if (!targetCode) {
+            targetCode = rooms.keys().next().value || defaultRoomCode;
+          }
+
+          ws.roomCode = targetCode;
+
+          if (!rooms.has(targetCode)) {
+            rooms.set(targetCode, { presenter: null, viewers: new Set([ws]) });
+          } else {
+            rooms.get(targetCode).viewers.add(ws);
+          }
+
+          const room = rooms.get(targetCode);
+          console.log(`[+] TV Receiver connected [ ${deviceName} (${clientIp}) ] to room: [ ${targetCode} ]`);
+
+          safeSend(ws, {
+            type: 'join-success',
+            code: targetCode,
+            hasPresenter: !!room.presenter,
+            presenterId: room.presenter ? room.presenter.id : null,
+            deviceName
+          });
+
+          if (room.presenter) {
+            safeSend(room.presenter, {
+              type: 'viewer-joined',
+              id: ws.id,
+              ip: clientIp,
+              deviceName,
+              viewersCount: room.viewers.size
+            });
+          }
+          return;
+        }
+
+        // WebRTC Signaling forwarding (offer, answer, candidate)
+        if (data.target) {
+          for (const client of allClients) {
+            if (client.id === data.target && client.readyState === WebSocket.OPEN) {
+              client.send(JSON.stringify({ ...data, from: ws.id }));
+              break;
+            }
+          }
+          return;
+        }
+
+        // Broadcast to partner in room
+        if (ws.roomCode && rooms.has(ws.roomCode)) {
+          const room = rooms.get(ws.roomCode);
+          if (ws === room.presenter) {
+            for (const viewer of room.viewers) {
+              safeSend(viewer, { ...data, from: ws.id });
+            }
+          } else if (room.presenter) {
+            safeSend(room.presenter, { ...data, from: ws.id });
+          }
+        }
+      } catch (err) {
+        console.error('Error handling WebSocket message:', err);
+      }
+    });
+
+    ws.on('close', () => {
+      allClients.delete(ws);
+      if (ws.roomCode && rooms.has(ws.roomCode)) {
+        const room = rooms.get(ws.roomCode);
+        if (room.presenter === ws) {
+          console.log(`[-] Presenter disconnected from room [ ${ws.roomCode} ]`);
+          room.presenter = null;
+          for (const viewer of room.viewers) {
+            safeSend(viewer, { type: 'presenter-disconnected' });
+          }
+        } else {
+          room.viewers.delete(ws);
+          console.log(`[-] TV viewer disconnected: [ ${ws.deviceName} ]`);
+          if (room.presenter) {
+            safeSend(room.presenter, {
+              type: 'viewer-left',
+              id: ws.id,
+              viewersCount: room.viewers.size
+            });
+          }
+        }
+      }
+    });
+
+    ws.on('error', (err) => {
+      console.warn('WS error on client', ws.id, err.message);
+    });
+
+    safeSend(ws, { type: 'welcome', id: ws.id, clientIp, deviceName });
   });
 }
 
-startServer(PREFERRED_PORT);
+function safeSend(client, obj) {
+  if (client && client.readyState === WebSocket.OPEN) {
+    client.send(JSON.stringify(obj));
+  }
+}
+
+// Keep-alive ping interval
+setInterval(() => {
+  for (const client of allClients) {
+    if (!client.isAlive) {
+      client.terminate();
+      allClients.delete(client);
+      continue;
+    }
+    client.isAlive = false;
+    client.ping();
+  }
+}, 15000);
+
+// Initialize dual servers: Port 80 AND Port 3000
+const serverPrimary = http.createServer(handleHttpRequest);
+const serverSecondary = http.createServer(handleHttpRequest);
+
+const wssPrimary = new WebSocket.Server({ server: serverPrimary });
+const wssSecondary = new WebSocket.Server({ server: serverSecondary });
+
+setupWebSocket(wssPrimary);
+setupWebSocket(wssSecondary);
+
+function startServers() {
+  const ips = getLocalIpAddresses();
+  const primaryIp = ips[0] ? ips[0].ip : '127.0.0.1';
+
+  serverPrimary.listen(PRIMARY_PORT, '0.0.0.0', () => {
+    console.log(`[✓] Primary Server running on Port ${PRIMARY_PORT}`);
+  }).on('error', (err) => {
+    console.log(`[!] Port ${PRIMARY_PORT} note: ${err.message}. Port ${SECONDARY_PORT} is active.`);
+  });
+
+  serverSecondary.listen(SECONDARY_PORT, '0.0.0.0', () => {
+    console.log(`[✓] Secondary Server running on Port ${SECONDARY_PORT}`);
+    printBanner(primaryIp);
+  }).on('error', (err) => {
+    console.error(`[!] Failed to start on secondary port ${SECONDARY_PORT}:`, err);
+  });
+}
+
+function printBanner(ip) {
+  console.log('\n================================================================');
+  console.log('   🚀 SACHCAST WIRELESS PC TO TV BROADCASTER (ALL FIXES APPLIED)');
+  console.log('================================================================\n');
+  console.log('  1. ON YOUR PC (Presenter):');
+  console.log(`     👉 Open Chrome or Edge: http://localhost  (or http://localhost:${SECONDARY_PORT})`);
+  console.log('\n  2. ON YOUR SMART TV (Viewer):');
+  console.log(`     👉 Open TV Browser:     http://${ip}/tv`);
+  console.log(`     (Or directly:           http://${ip}:${SECONDARY_PORT}/tv)`);
+  console.log('\n  ✨ WebRTC 60fps Ultra-Low Latency + Universal Canvas Fallback Active');
+  console.log('================================================================\n');
+}
+
+startServers();

@@ -3,19 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AirCast - PC Screen Broadcast</title>
+  <title>SachCast - Wireless PC to TV Broadcaster</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     :root {
-      --bg: #090d16;
-      --card-bg: rgba(20, 27, 45, 0.75);
+      --bg: #070a12;
+      --card-bg: rgba(18, 24, 40, 0.75);
       --card-border: rgba(255, 255, 255, 0.08);
       --accent: #3b82f6;
       --accent-glow: rgba(59, 130, 246, 0.5);
       --success: #10b981;
+      --warning: #f59e0b;
       --danger: #ef4444;
       --text: #f8fafc;
       --text-muted: #94a3b8;
@@ -28,7 +29,7 @@
     }
 
     body {
-      background: radial-gradient(circle at 50% 0%, #1e293b 0%, #090d16 100%);
+      background: radial-gradient(circle at 50% 0%, #172554 0%, #070a12 85%);
       color: var(--text);
       font-family: 'Plus Jakarta Sans', sans-serif;
       min-height: 100vh;
@@ -37,9 +38,9 @@
     }
 
     header {
-      padding: 1.1rem 2rem;
+      padding: 1.1rem 2.25rem;
       border-bottom: 1px solid var(--card-border);
-      backdrop-filter: blur(12px);
+      backdrop-filter: blur(16px);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -48,15 +49,15 @@
     .brand {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: 0.85rem;
       font-weight: 800;
-      font-size: 1.3rem;
+      font-size: 1.35rem;
       letter-spacing: -0.02em;
     }
 
     .brand-icon {
-      width: 40px;
-      height: 40px;
+      width: 42px;
+      height: 42px;
       background: linear-gradient(135deg, #3b82f6, #6366f1);
       border-radius: 12px;
       display: grid;
@@ -64,21 +65,27 @@
       box-shadow: 0 0 20px var(--accent-glow);
     }
 
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
     .status-pill {
       display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.45rem 1rem;
+      gap: 0.6rem;
+      padding: 0.5rem 1.1rem;
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--card-border);
       border-radius: 9999px;
       font-size: 0.85rem;
-      font-weight: 500;
+      font-weight: 600;
     }
 
     .dot {
-      width: 8px;
-      height: 8px;
+      width: 9px;
+      height: 9px;
       border-radius: 50%;
       background: #eab308;
       animation: pulse 2s infinite;
@@ -94,23 +101,40 @@
       50% { opacity: 0.4; transform: scale(0.85); }
     }
 
+    .tv-mode-btn {
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #93c5fd;
+      padding: 0.5rem 1rem;
+      border-radius: 10px;
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .tv-mode-btn:hover {
+      background: rgba(59, 130, 246, 0.25);
+    }
+
     main {
       flex: 1;
-      max-width: 1440px;
+      max-width: 1480px;
       width: 100%;
       margin: 0 auto;
       padding: 1.75rem 2rem;
       display: grid;
-      grid-template-columns: 1fr 420px;
+      grid-template-columns: 1fr 430px;
       gap: 1.75rem;
     }
 
-    @media (max-width: 1080px) {
+    @media (max-width: 1100px) {
       main {
         grid-template-columns: 1fr;
       }
     }
 
+    /* Screen Preview Stage */
     .preview-card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -133,7 +157,7 @@
     .preview-area {
       flex: 1;
       min-height: 480px;
-      background: #030712;
+      background: #020617;
       position: relative;
       display: flex;
       align-items: center;
@@ -151,7 +175,7 @@
     .empty-state {
       text-align: center;
       padding: 3rem 2rem;
-      max-width: 480px;
+      max-width: 500px;
     }
 
     .empty-icon {
@@ -167,14 +191,14 @@
     }
 
     .empty-state h3 {
-      font-size: 1.4rem;
+      font-size: 1.45rem;
       font-weight: 700;
       margin-bottom: 0.6rem;
     }
 
     .empty-state p {
       color: var(--text-muted);
-      font-size: 1rem;
+      font-size: 0.98rem;
       line-height: 1.6;
       margin-bottom: 1.75rem;
     }
@@ -183,29 +207,37 @@
       padding: 1.25rem 1.75rem;
       border-top: 1px solid var(--card-border);
       display: flex;
-      gap: 1rem;
+      justify-content: space-between;
       align-items: center;
-      background: rgba(9, 13, 22, 0.8);
+      background: rgba(7, 10, 18, 0.85);
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
     }
 
     button {
       font-family: inherit;
       cursor: pointer;
       border: none;
-      border-radius: 14px;
+      border-radius: 12px;
       font-weight: 700;
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 0.65rem;
+      gap: 0.6rem;
     }
 
     .btn-primary {
       background: linear-gradient(135deg, #3b82f6, #2563eb);
       color: white;
-      padding: 0.9rem 2rem;
-      font-size: 1.05rem;
+      padding: 0.85rem 1.75rem;
+      font-size: 1rem;
       box-shadow: 0 4px 20px var(--accent-glow);
     }
 
@@ -217,8 +249,8 @@
     .btn-danger {
       background: linear-gradient(135deg, #ef4444, #dc2626);
       color: white;
-      padding: 0.9rem 2rem;
-      font-size: 1.05rem;
+      padding: 0.85rem 1.75rem;
+      font-size: 1rem;
     }
 
     .btn-danger:hover {
@@ -226,140 +258,177 @@
       transform: translateY(-2px);
     }
 
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 0.85rem 1.25rem;
+      font-size: 0.9rem;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    /* Mode Pill Selector */
+    .mode-selector {
+      display: flex;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+    }
+
+    .mode-tab {
+      padding: 0.4rem 0.85rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-muted);
+      border: none;
+      background: transparent;
+    }
+
+    .mode-tab.active {
+      background: #3b82f6;
+      color: white;
+      box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4);
+    }
+
+    /* Right Sidebar */
     .side-panel {
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
     }
 
-    .fast-connect-card {
-      background: linear-gradient(135deg, rgba(30, 58, 138, 0.35), rgba(20, 27, 45, 0.85));
-      border: 1px solid rgba(59, 130, 246, 0.3);
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
       border-radius: 24px;
-      padding: 1.75rem;
+      padding: 1.6rem;
       backdrop-filter: blur(16px);
       position: relative;
-      overflow: hidden;
     }
 
-    .section-title {
+    .card-accent {
+      background: linear-gradient(135deg, rgba(30, 58, 138, 0.35), rgba(18, 24, 40, 0.9));
+      border: 1px solid rgba(59, 130, 246, 0.35);
+    }
+
+    .card-title {
       font-size: 1.15rem;
       font-weight: 700;
-      margin-bottom: 1.25rem;
+      margin-bottom: 1.15rem;
       display: flex;
       align-items: center;
       gap: 0.6rem;
     }
 
     .meet-code-container {
-      background: rgba(0, 0, 0, 0.4);
+      background: rgba(0, 0, 0, 0.45);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 16px;
-      padding: 1.25rem;
+      padding: 1.15rem;
       text-align: center;
       margin-bottom: 1.25rem;
     }
 
     .meet-code-label {
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--text-muted);
-      margin-bottom: 0.4rem;
+      margin-bottom: 0.3rem;
       font-weight: 600;
     }
 
     .meet-code-display {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 2.6rem;
+      font-size: 2.7rem;
       font-weight: 700;
       letter-spacing: 0.2em;
       color: #60a5fa;
       text-shadow: 0 0 20px rgba(96, 165, 250, 0.5);
     }
 
-    .easy-url-box {
-      background: rgba(0, 0, 0, 0.5);
-      border: 1px dashed rgba(59, 130, 246, 0.4);
-      padding: 1rem 1.2rem;
-      border-radius: 14px;
+    .url-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 0.75rem;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 0.75rem 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      margin-bottom: 0.6rem;
     }
 
-    .easy-url-content {
+    .url-text {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 1.05rem;
+      font-size: 0.92rem;
       color: #93c5fd;
       font-weight: 600;
     }
 
-    .copy-chip {
+    .copy-btn {
       background: rgba(59, 130, 246, 0.2);
       color: #93c5fd;
       border: 1px solid rgba(59, 130, 246, 0.4);
-      padding: 0.35rem 0.75rem;
+      padding: 0.3rem 0.7rem;
       border-radius: 8px;
       font-size: 0.75rem;
       font-weight: 600;
       cursor: pointer;
     }
 
-    .tv-steps {
+    .copy-btn:hover {
+      background: rgba(59, 130, 246, 0.4);
+    }
+
+    /* Connected TVs List */
+    .viewers-list {
       list-style: none;
       display: flex;
       flex-direction: column;
-      gap: 0.85rem;
-      margin-top: 1.25rem;
+      gap: 0.75rem;
+      margin-top: 1rem;
     }
 
-    .tv-steps li {
+    .viewer-item {
       display: flex;
-      gap: 0.8rem;
-      align-items: flex-start;
-      font-size: 0.92rem;
-      color: var(--text-muted);
-      line-height: 1.45;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1rem;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 12px;
     }
 
-    .tv-steps strong {
-      color: var(--text);
+    .viewer-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
     }
 
-    .badge-num {
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      background: #3b82f6;
-      color: white;
-      font-weight: 700;
+    .viewer-icon {
+      width: 34px;
+      height: 34px;
+      background: rgba(16, 185, 129, 0.15);
+      border-radius: 8px;
       display: grid;
       place-items: center;
-      font-size: 0.75rem;
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-
-    .qr-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 24px;
-      padding: 1.5rem;
-      backdrop-filter: blur(16px);
-      text-align: center;
+      color: #34d399;
     }
 
     #qrcode {
       display: flex;
       justify-content: center;
-      margin: 1.25rem auto;
-      padding: 1rem;
+      margin: 1rem auto;
+      padding: 0.9rem;
       background: white;
       border-radius: 16px;
       width: fit-content;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
     }
   </style>
 </head>
@@ -367,29 +436,40 @@
   <header>
     <div class="brand">
       <div class="brand-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect>
           <polyline points="17 2 12 7 7 2"></polyline>
         </svg>
       </div>
-      <span>AirCast Broadcast</span>
+      <span>SachCast Studio</span>
     </div>
 
-    <div class="status-pill">
-      <span class="dot" id="statusDot"></span>
-      <span id="statusText">Connecting...</span>
+    <div class="header-actions">
+      <div class="status-pill">
+        <span class="dot" id="statusDot"></span>
+        <span id="statusText">Connecting to local hub...</span>
+      </div>
+      <a href="/tv" target="_blank" class="tv-mode-btn">Switch to TV Receiver</a>
     </div>
   </header>
 
   <main>
+    <!-- Left Screen Area -->
     <div class="preview-card">
       <div class="preview-header">
         <div>
           <h2 style="font-size: 1.2rem; font-weight: 700;">Broadcast Feed</h2>
-          <span style="font-size: 0.85rem; color: var(--text-muted);" id="viewersCount">0 TV(s) Connected</span>
+          <span style="font-size: 0.85rem; color: var(--text-muted);" id="tvCountHeader">0 TV(s) Connected</span>
         </div>
-        <div class="status-pill" id="liveBadge" style="display: none; background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #34d399;">
-          ● BROADCASTING LIVE
+
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div class="mode-selector">
+            <button class="mode-tab active" id="modeRtcTab" onclick="switchStreamMode('webrtc')">⚡ WebRTC (60fps)</button>
+            <button class="mode-tab" id="modeCanvasTab" onclick="switchStreamMode('canvas')">📺 Universal TV</button>
+          </div>
+          <div class="status-pill" id="liveBadge" style="display: none; background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #34d399;">
+            ● LIVE
+          </div>
         </div>
       </div>
 
@@ -402,80 +482,99 @@
               <line x1="12" y1="17" x2="12" y2="21"></line>
             </svg>
           </div>
-          <h3>Click to Start Wireless Cast</h3>
-          <p>Share your Entire Screen, App Window, or Chrome Tab. Your TV will automatically mirror it in real-time.</p>
+          <h3>Ready to Cast Screen to TV</h3>
+          <p>Share your Entire Screen, App Window, or Chrome Tab. Your TV will automatically mirror it in real-time like Google Meet.</p>
           <button class="btn-primary" onclick="startScreenShare()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
               <circle cx="12" cy="12" r="10"></circle>
               <polygon points="10 8 16 12 10 16 10 8"></polygon>
             </svg>
-            Share Screen
+            Share Screen Now
           </button>
         </div>
         <video id="localVideo" autoplay playsinline muted style="display: none;"></video>
       </div>
 
       <div class="controls-bar">
-        <button id="startBtn" class="btn-primary" onclick="startScreenShare()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-            <line x1="8" y1="21" x2="16" y2="21"></line>
-            <line x1="12" y1="17" x2="12" y2="21"></line>
-          </svg>
-          Share Screen
-        </button>
+        <div class="btn-group">
+          <button id="startBtn" class="btn-primary" onclick="startScreenShare()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+            Share Screen
+          </button>
 
-        <button id="stopBtn" class="btn-danger" style="display: none;" onclick="stopScreenShare()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <rect x="6" y="6" width="12" height="12"></rect>
-          </svg>
-          Stop Sharing
+          <button id="stopBtn" class="btn-danger" style="display: none;" onclick="stopScreenShare()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <rect x="6" y="6" width="12" height="12"></rect>
+            </svg>
+            Stop Sharing
+          </button>
+        </div>
+
+        <button class="btn-secondary" onclick="sendTvPing()">
+          🔔 Flash Test on TV
         </button>
       </div>
     </div>
 
+    <!-- Right Sidebar -->
     <div class="side-panel">
-      <div class="fast-connect-card">
-        <div class="section-title">
+      <!-- Easy Connect Details -->
+      <div class="card card-accent">
+        <div class="card-title">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.2">
             <rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect>
             <polyline points="17 2 12 7 7 2"></polyline>
           </svg>
-          Connect Your TV (Easiest Method)
+          Connect Any Smart TV
         </div>
 
         <div class="meet-code-container">
-          <div class="meet-code-label">Meeting TV Code</div>
-          <div class="meet-code-display" id="roomCodeDisplay">----</div>
+          <div class="meet-code-label">4-Digit TV Code</div>
+          <div class="meet-code-display" id="roomCodeDisplay">7777</div>
         </div>
 
-        <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.6rem;">
-          On your TV browser, simply open:
-        </div>
-        <div class="easy-url-box">
-          <span class="easy-url-content" id="shortTvUrl">http://.../tv</span>
-          <button class="copy-chip" onclick="copyShortUrl()">Copy</button>
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">
+          Open TV Browser & Enter either URL:
         </div>
 
-        <ul class="tv-steps">
-          <li>
-            <span class="badge-num">1</span>
-            <span>Open your TV's browser (Samsung, LG, FireStick, Android TV).</span>
-          </li>
-          <li>
-            <span class="badge-num">2</span>
-            <span>Type the short URL above.</span>
-          </li>
-          <li>
-            <span class="badge-num">3</span>
-            <span>It will <strong>automatically connect</strong> to your screen!</span>
-          </li>
-        </ul>
+        <div class="url-row">
+          <span class="url-text" id="urlPrimary">http://.../tv</span>
+          <button class="copy-btn" onclick="copyUrl('urlPrimary')">Copy</button>
+        </div>
+
+        <div class="url-row">
+          <span class="url-text" id="urlSecondary">http://...:3000/tv</span>
+          <button class="copy-btn" onclick="copyUrl('urlSecondary')">Copy</button>
+        </div>
       </div>
 
-      <div class="qr-card">
-        <h4 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.4rem;">Scan with Phone / Tablet</h4>
-        <p style="font-size: 0.85rem; color: var(--text-muted);">Point your camera at this QR code to watch the screen immediately:</p>
+      <!-- Live Connected TVs List -->
+      <div class="card">
+        <div class="card-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          Connected Viewers
+        </div>
+
+        <div id="noViewersNotice" style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 1rem 0;">
+          Waiting for TV to connect...
+        </div>
+
+        <ul class="viewers-list" id="viewersList" style="display: none;"></ul>
+      </div>
+
+      <!-- Quick QR Scan -->
+      <div class="card" style="text-align: center;">
+        <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.3rem;">Instant Mobile / TV Scan</h4>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Scan with camera to connect immediately:</p>
         <div id="qrcode"></div>
       </div>
     </div>
@@ -485,42 +584,49 @@
     let ws = null;
     let localStream = null;
     let peerConnections = new Map(); // viewerId -> RTCPeerConnection
-    let knownViewerIds = new Set();
-    let myId = null;
-    let currentRoomCode = null;
-    let fullTvUrl = '';
+    let knownViewers = new Map(); // viewerId -> { ip, deviceName }
+    let currentMode = 'webrtc'; // 'webrtc' or 'canvas'
+    let canvasLoopActive = false;
+    let hiddenCanvas = document.createElement('canvas');
+    let hiddenCtx = hiddenCanvas.getContext('2d');
+    let currentRoomCode = '7777';
 
     const rtcConfig = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun.cloudflare.com:3478' }
       ]
     };
 
-    async function loadServerInfo() {
+    async function initInfo() {
       try {
         const res = await fetch('/api/info');
         const data = await res.json();
-        fullTvUrl = data.tvUrl;
-        document.getElementById('shortTvUrl').innerText = fullTvUrl;
+        document.getElementById('urlPrimary').innerText = data.urls.tv;
+        document.getElementById('urlSecondary').innerText = data.urls.tv3000;
+        document.getElementById('roomCodeDisplay').innerText = data.activeCode;
+        currentRoomCode = data.activeCode;
 
         document.getElementById('qrcode').innerHTML = '';
         new QRCode(document.getElementById('qrcode'), {
-          text: fullTvUrl,
-          width: 150,
-          height: 150,
+          text: data.urls.tv,
+          width: 140,
+          height: 140,
           colorDark: "#000000",
           colorLight: "#ffffff",
           correctLevel: QRCode.CorrectLevel.H
         });
-      } catch (e) {
-        console.error('Failed to get server info:', e);
+      } catch (err) {
+        console.warn('Could not fetch server info:', err);
       }
     }
 
-    function copyShortUrl() {
-      navigator.clipboard.writeText(fullTvUrl);
-      alert('Copied URL to clipboard: ' + fullTvUrl);
+    function copyUrl(elementId) {
+      const text = document.getElementById(elementId).innerText;
+      navigator.clipboard.writeText(text);
+      alert('Copied URL to clipboard: ' + text);
     }
 
     function connectSignaling() {
@@ -530,31 +636,37 @@
 
       ws.onopen = () => {
         document.getElementById('statusDot').classList.add('live');
-        document.getElementById('statusText').innerText = 'Online (Ready)';
-        ws.send(JSON.stringify({ type: 'register-presenter' }));
+        document.getElementById('statusText').innerText = 'Online (Hub Connected)';
+        ws.send(JSON.stringify({ type: 'register-presenter', code: currentRoomCode }));
       };
 
       ws.onmessage = async (event) => {
+        if (typeof event.data !== 'string') return;
         const msg = JSON.parse(event.data);
 
-        if (msg.type === 'welcome') {
-          myId = msg.id;
-        } else if (msg.type === 'room-created') {
+        if (msg.type === 'room-created') {
           currentRoomCode = msg.code;
           document.getElementById('roomCodeDisplay').innerText = msg.code;
+          if (msg.viewers && msg.viewers.length > 0) {
+            msg.viewers.forEach(v => knownViewers.set(v.id, v));
+            renderViewersList();
+            if (localStream) connectAllViewers();
+          }
         } else if (msg.type === 'viewer-joined') {
-          knownViewerIds.add(msg.id);
-          updateViewers(msg.viewersCount);
+          knownViewers.set(msg.id, { id: msg.id, ip: msg.ip, deviceName: msg.deviceName });
+          renderViewersList();
           if (localStream) {
-            await setupPeerConnection(msg.id, true);
+            if (currentMode === 'webrtc') {
+              await setupPeerConnection(msg.id, true);
+            }
           }
         } else if (msg.type === 'viewer-left') {
-          knownViewerIds.delete(msg.id);
+          knownViewers.delete(msg.id);
           if (peerConnections.has(msg.id)) {
             peerConnections.get(msg.id).close();
             peerConnections.delete(msg.id);
           }
-          updateViewers(msg.viewersCount || knownViewerIds.size);
+          renderViewersList();
         } else if (msg.type === 'answer') {
           const pc = peerConnections.get(msg.from);
           if (pc) {
@@ -566,7 +678,7 @@
             try {
               await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
             } catch (err) {
-              console.error('Error adding candidate:', err);
+              console.error('Candidate error:', err);
             }
           }
         }
@@ -577,6 +689,44 @@
         document.getElementById('statusText').innerText = 'Reconnecting...';
         setTimeout(connectSignaling, 2000);
       };
+    }
+
+    function renderViewersList() {
+      const list = document.getElementById('viewersList');
+      const notice = document.getElementById('noViewersNotice');
+      const count = knownViewers.size;
+      document.getElementById('tvCountHeader').innerText = `${count} TV(s) Connected`;
+
+      if (count === 0) {
+        list.style.display = 'none';
+        notice.style.display = 'block';
+        return;
+      }
+
+      notice.style.display = 'none';
+      list.style.display = 'flex';
+      list.innerHTML = '';
+
+      knownViewers.forEach((viewer) => {
+        const li = document.createElement('li');
+        li.className = 'viewer-item';
+        li.innerHTML = `
+          <div class="viewer-info">
+            <div class="viewer-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect>
+                <polyline points="17 2 12 7 7 2"></polyline>
+              </svg>
+            </div>
+            <div>
+              <div style="font-weight: 700; font-size: 0.95rem;">${viewer.deviceName}</div>
+              <div style="font-size: 0.75rem; color: #94a3b8;">IP: ${viewer.ip}</div>
+            </div>
+          </div>
+          <span style="font-size: 0.8rem; color: #10b981; font-weight: 600;">● Active</span>
+        `;
+        list.appendChild(li);
+      });
     }
 
     async function setupPeerConnection(viewerId, isInitiator) {
@@ -614,9 +764,10 @@
       }
     }
 
-    function updateViewers(count) {
-      const num = count !== undefined ? count : knownViewerIds.size;
-      document.getElementById('viewersCount').innerText = `${num} TV(s) Connected`;
+    async function connectAllViewers() {
+      for (const [viewerId, _] of knownViewers) {
+        await setupPeerConnection(viewerId, true);
+      }
     }
 
     async function startScreenShare() {
@@ -643,9 +794,10 @@
         document.getElementById('stopBtn').style.display = 'inline-flex';
         document.getElementById('liveBadge').style.display = 'inline-flex';
 
-        // Connect any waiting viewers immediately
-        for (const viewerId of knownViewerIds) {
-          await setupPeerConnection(viewerId, true);
+        if (currentMode === 'webrtc') {
+          await connectAllViewers();
+        } else {
+          startCanvasBroadcasting();
         }
 
         localStream.getVideoTracks()[0].onended = () => {
@@ -663,14 +815,76 @@
         localStream = null;
       }
 
+      canvasLoopActive = false;
       document.getElementById('localVideo').style.display = 'none';
       document.getElementById('emptyState').style.display = 'block';
       document.getElementById('startBtn').style.display = 'inline-flex';
       document.getElementById('stopBtn').style.display = 'none';
       document.getElementById('liveBadge').style.display = 'none';
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'stream-stopped' }));
+      }
     }
 
-    loadServerInfo();
+    function switchStreamMode(mode) {
+      currentMode = mode;
+      document.getElementById('modeRtcTab').classList.toggle('active', mode === 'webrtc');
+      document.getElementById('modeCanvasTab').classList.toggle('active', mode === 'canvas');
+
+      if (localStream) {
+        if (mode === 'webrtc') {
+          canvasLoopActive = false;
+          connectAllViewers();
+        } else {
+          startCanvasBroadcasting();
+        }
+      }
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'mode-changed', mode: mode }));
+      }
+    }
+
+    // Universal Mode: captures canvas frames and relays binary WebP/JPEG over WebSocket
+    function startCanvasBroadcasting() {
+      if (canvasLoopActive) return;
+      canvasLoopActive = true;
+
+      function renderFrame() {
+        if (!canvasLoopActive || !localStream) return;
+        const video = document.getElementById('localVideo');
+        if (video.videoWidth > 0) {
+          hiddenCanvas.width = video.videoWidth;
+          hiddenCanvas.height = video.videoHeight;
+          hiddenCtx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
+
+          hiddenCanvas.toBlob((blob) => {
+            if (blob && ws && ws.readyState === WebSocket.OPEN) {
+              blob.arrayBuffer().then((buf) => {
+                ws.send(buf);
+              });
+            }
+            if (canvasLoopActive) {
+              setTimeout(renderFrame, 33); // 30 FPS smooth transmission
+            }
+          }, 'image/jpeg', 0.8);
+        } else {
+          setTimeout(renderFrame, 100);
+        }
+      }
+
+      renderFrame();
+    }
+
+    function sendTvPing() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'tv-ping' }));
+        alert('Sent flash alert to all connected TVs!');
+      }
+    }
+
+    initInfo();
     connectSignaling();
   </script>
 </body>
