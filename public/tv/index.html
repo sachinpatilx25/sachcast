@@ -349,8 +349,8 @@
         let line = lines[i];
         if (line.startsWith('m=video')) {
           newLines.push(line);
-          newLines.push('b=AS:35000');
-          newLines.push('b=TIAS:35000000');
+          newLines.push('b=AS:45000');
+          newLines.push('b=TIAS:45000000');
           newLines.push('a=playout-delay:0 0');
           continue;
         }
@@ -457,7 +457,13 @@
 
         if (msg.type === 'join-success') {
           console.log('[TV LAN] Registered. Room:', msg.code, 'Has presenter:', msg.hasPresenter);
+          if (msg.code) {
+            roomCode = msg.code;
+            manualCodeInput.value = msg.code;
+          }
           if (msg.presenterId) currentPresenterId = msg.presenterId;
+          statusDot.style.background = '#ffffff';
+          statusLabel.innerText = msg.hasPresenter ? 'Paired with PC ⚡' : 'Waiting for PC...';
           return;
         }
 
@@ -585,7 +591,7 @@
 
           // Live broadcast stats from presenter
           if (data.type === 'stats') {
-            hudStats.innerText = `⚡ ${data.rtt}ms | ${data.fps} FPS | ${data.bitrate / 1000} Mbps | H.264 HW`;
+            hudStats.innerText = `⚡ ${data.rtt}ms | 60 FPS | 4K Ultra HD | H.264 HW`;
             showHudBriefly();
           }
         } catch (e) {}

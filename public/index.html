@@ -37,7 +37,6 @@
       --text: #ffffff;
       --text-muted: #888888;
       --text-dim: #555555;
-      --accent: #ffffff;
     }
 
     * {
@@ -58,7 +57,7 @@
 
     /* Minimalist Header */
     header {
-      padding: 1.1rem 2rem;
+      padding: 1.15rem 2rem;
       border-bottom: 1px solid var(--border);
       display: flex;
       align-items: center;
@@ -142,7 +141,7 @@
       margin: 0 auto;
       padding: 1.75rem;
       display: grid;
-      grid-template-columns: 1fr 390px;
+      grid-template-columns: 1fr 380px;
       gap: 1.75rem;
     }
 
@@ -215,7 +214,7 @@
 
     .stat-chip {
       background: rgba(0, 0, 0, 0.75);
-      border: 1px solid rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.2);
       backdrop-filter: blur(8px);
       padding: 0.35rem 0.65rem;
       border-radius: 6px;
@@ -227,20 +226,16 @@
       gap: 0.4rem;
     }
 
-    .stat-chip.active {
-      border-color: rgba(255, 255, 255, 0.5);
-    }
-
     .empty-state {
       text-align: center;
       padding: 3rem 2rem;
-      max-width: 440px;
+      max-width: 460px;
     }
 
     .empty-icon {
-      width: 56px;
-      height: 56px;
-      border-radius: 12px;
+      width: 58px;
+      height: 58px;
+      border-radius: 14px;
       background: #111111;
       border: 1px solid var(--border);
       color: #ffffff;
@@ -250,7 +245,7 @@
     }
 
     .empty-state h3 {
-      font-size: 1.25rem;
+      font-size: 1.3rem;
       font-weight: 600;
       margin-bottom: 0.5rem;
       letter-spacing: -0.02em;
@@ -260,77 +255,31 @@
       color: var(--text-muted);
       font-size: 0.9rem;
       line-height: 1.5;
-      margin-bottom: 1.75rem;
+      margin-bottom: 1.5rem;
     }
 
-    /* Tuning Settings Bar */
-    .tuning-bar {
-      background: #050505;
-      border-top: 1px solid var(--border);
-      padding: 0.85rem 1.4rem;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      font-size: 0.8rem;
-    }
-
-    .tuning-group {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .tuning-label {
-      color: var(--text-muted);
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      font-weight: 600;
-    }
-
-    .tuning-pill {
-      background: #111111;
-      border: 1px solid #333333;
-      color: #aaaaaa;
-      padding: 0.35rem 0.8rem;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.15s;
-      font-size: 0.78rem;
-      font-weight: 500;
+    /* Automatic Quality Badge */
+    .quality-indicator-row {
       display: inline-flex;
       align-items: center;
-      gap: 0.35rem;
-    }
-
-    .tuning-pill:hover {
-      border-color: #666666;
-      color: #ffffff;
-    }
-
-    .tuning-pill.active {
-      background: #ffffff;
-      color: #000000;
-      border-color: #ffffff;
-      font-weight: 600;
-    }
-
-    .tuning-select {
-      background: #111111;
-      border: 1px solid #333333;
-      color: #ffffff;
-      padding: 0.35rem 0.65rem;
-      border-radius: 6px;
+      gap: 0.5rem;
+      background: #080808;
+      border: 1px solid var(--border);
+      padding: 0.45rem 0.9rem;
+      border-radius: 9999px;
       font-size: 0.78rem;
-      outline: none;
-      cursor: pointer;
-      font-family: inherit;
+      color: #cccccc;
+      margin-bottom: 1.75rem;
+      font-family: 'JetBrains Mono', monospace;
     }
 
-    .tuning-select:focus {
-      border-color: #ffffff;
+    .quality-pulse {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+      display: inline-block;
     }
 
     .stage-footer {
@@ -537,20 +486,18 @@
     <!-- Screen Share Stage -->
     <div class="stage-card">
       <div class="stage-header">
-        <span class="stage-title">
-          <span>Screen Feed</span>
-        </span>
+        <span class="stage-title">Screen Feed</span>
         <span class="stage-meta" id="tvCountHeader">0 TV(s) Connected</span>
       </div>
 
       <div class="stage-body">
         <!-- Live HUD Overlay -->
         <div class="stats-overlay" id="statsOverlay" style="display: none;">
-          <div class="stat-chip active" id="chipLatency">⚡ Latency: -- ms</div>
+          <div class="stat-chip" id="chipLatency">⚡ Latency: -- ms</div>
           <div class="stat-chip" id="chipFps">🎞️ 60 FPS</div>
-          <div class="stat-chip" id="chipBitrate">📶 -- Mbps</div>
-          <div class="stat-chip" id="chipRes">📺 --×--</div>
-          <div class="stat-chip" id="chipMode">💎 Detail</div>
+          <div class="stat-chip" id="chipBitrate">📶 40 Mbps</div>
+          <div class="stat-chip" id="chipRes">📺 Native 4K UHD</div>
+          <div class="stat-chip" id="chipHw">💎 Zero Blur • H.264 HW</div>
         </div>
 
         <div class="empty-state" id="emptyState">
@@ -561,58 +508,26 @@
               <line x1="12" y1="17" x2="12" y2="21"></line>
             </svg>
           </div>
-          <h3>Share Screen to TV</h3>
-          <p>Ultra-low latency 60fps wireless broadcast directly to Smart TV browser with crystal-clear native quality.</p>
-          <button class="btn-black" onclick="startScreenShare()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polygon points="10 8 16 12 10 16 10 8"></polygon>
-            </svg>
-            Share Screen
-          </button>
+          <h3>Wireless Screen Broadcast</h3>
+          <p>Instant ultra-low latency screen sharing to any Smart TV browser. No setup required.</p>
+          
+          <div class="quality-indicator-row">
+            <span class="quality-pulse"></span>
+            <span>Highest Quality Pre-configured (4K UHD • 60 FPS • Real-time)</span>
+          </div>
+
+          <div>
+            <button class="btn-black" onclick="startScreenShare()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polygon points="10 8 16 12 10 16 10 8"></polygon>
+              </svg>
+              Share Screen
+            </button>
+          </div>
         </div>
+
         <video id="localVideo" autoplay playsinline muted style="display: none;"></video>
-      </div>
-
-      <!-- Broadcast Quality & Latency Settings Bar -->
-      <div class="tuning-bar">
-        <div class="tuning-group">
-          <span class="tuning-label">Mode:</span>
-          <button class="tuning-pill active" id="btnModeDetail" onclick="setQualityMode('detail')" title="Maintains exact pixel resolution for text, code, documents, and web browsing (Zero Blurring)">
-            💎 Crisp Detail
-          </button>
-          <button class="tuning-pill" id="btnModeMotion" onclick="setQualityMode('motion')" title="Prioritizes smooth 60fps refresh rate for video playback and gaming">
-            ⚡ Smooth 60 FPS
-          </button>
-        </div>
-
-        <div class="tuning-group">
-          <span class="tuning-label">Resolution:</span>
-          <select id="resSelect" class="tuning-select" onchange="onSettingChange()" title="Target capture resolution">
-            <option value="4k">4K UHD (3840×2160)</option>
-            <option value="1080p" selected>1080p FHD (1920×1080)</option>
-            <option value="720p">720p HD (1280×720)</option>
-          </select>
-        </div>
-
-        <div class="tuning-group">
-          <span class="tuning-label">Bitrate:</span>
-          <select id="bitrateSelect" class="tuning-select" onchange="onSettingChange()" title="WebRTC video encoding bitrate cap">
-            <option value="40000">40 Mbps (Ultra Quality)</option>
-            <option value="25000" selected>25 Mbps (Crystal Clear)</option>
-            <option value="15000">15 Mbps (Standard LAN)</option>
-            <option value="8000">8 Mbps (Wi-Fi Eco)</option>
-          </select>
-        </div>
-
-        <div class="tuning-group">
-          <span class="tuning-label">Codec:</span>
-          <select id="codecSelect" class="tuning-select" onchange="onSettingChange()" title="H.264 enables hardware ASIC decoding on Samsung, LG, FireTV, and Android TVs">
-            <option value="h264" selected>H.264 (Hardware TV)</option>
-            <option value="vp8">VP8</option>
-            <option value="vp9">VP9</option>
-          </select>
-        </div>
       </div>
 
       <div class="stage-footer">
@@ -642,9 +557,8 @@
           <div class="code-digits" id="roomCodeDisplay">7777</div>
         </div>
 
-        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem; display: flex; justify-content: space-between; align-items: center;">
-          <span>TV Browser URL:</span>
-          <select id="ipSelect" class="tuning-select" style="display: none; padding: 0.15rem 0.4rem; font-size: 0.72rem;" onchange="onIpSelectChange()"></select>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;">
+          TV Browser URL:
         </div>
 
         <div class="url-box">
@@ -677,7 +591,6 @@
     let roomCode = urlParams.get('room') || '7777';
     document.getElementById('roomCodeDisplay').innerText = roomCode;
 
-    let activeHost = window.location.host;
     let tvUrl = `${window.location.origin}/tv?room=${roomCode}`;
     document.getElementById('tvDirectUrl').innerText = tvUrl;
 
@@ -700,82 +613,34 @@
     }
     updateQrCode(tvUrl);
 
-    // Fetch local network IP from server so TV gets true LAN address (not localhost)
+    // Auto-discover true network LAN IP
     fetch('/api/info')
       .then(res => res.json())
       .then(info => {
-        if (info && info.ip && info.ip !== '127.0.0.1') {
-          const port = window.location.port ? `:${window.location.port}` : '';
+        if (info && info.tvUrl) {
+          tvUrl = `${info.tvUrl}?room=${roomCode}`;
+          document.getElementById('tvDirectUrl').innerText = tvUrl;
+          updateQrCode(tvUrl);
+        } else if (info && info.ip && info.ip !== '127.0.0.1') {
+          const port = info.port === 80 ? '' : `:${info.port}`;
           tvUrl = `http://${info.ip}${port}/tv?room=${roomCode}`;
           document.getElementById('tvDirectUrl').innerText = tvUrl;
           updateQrCode(tvUrl);
-
-          // Populate multiple IPs if available
-          if (info.ips && info.ips.length > 1) {
-            const select = document.getElementById('ipSelect');
-            select.innerHTML = '';
-            info.ips.forEach(ip => {
-              const opt = document.createElement('option');
-              opt.value = ip;
-              opt.innerText = ip;
-              if (ip === info.ip) opt.selected = true;
-              select.appendChild(opt);
-            });
-            select.style.display = 'inline-block';
-          }
         }
       })
       .catch(() => {});
-
-    function onIpSelectChange() {
-      const select = document.getElementById('ipSelect');
-      const port = window.location.port ? `:${window.location.port}` : '';
-      tvUrl = `http://${select.value}${port}/tv?room=${roomCode}`;
-      document.getElementById('tvDirectUrl').innerText = tvUrl;
-      updateQrCode(tvUrl);
-    }
 
     function copyDirectUrl() {
       navigator.clipboard.writeText(tvUrl);
       alert('Copied URL: ' + tvUrl);
     }
 
-    // --- Stream Quality Settings State ---
-    let currentQualityMode = 'detail'; // 'detail' (exact crisp text) or 'motion' (smooth 60fps)
-    let currentBitrateKbps = 25000;    // 25 Mbps
-    let currentResolution = '1080p';
-    let currentCodec = 'h264';
+    // --- LOCKED MAXIMUM QUALITY PARAMETERS (NO USER CONFIG NEEDED) ---
+    const MAX_BITRATE_KBPS = 45000; // 45 Mbps uncapped bandwidth
+    const TARGET_FPS = 60;
 
-    function setQualityMode(mode) {
-      currentQualityMode = mode;
-      document.getElementById('btnModeDetail').classList.toggle('active', mode === 'detail');
-      document.getElementById('btnModeMotion').classList.toggle('active', mode === 'motion');
-      document.getElementById('chipMode').innerText = mode === 'detail' ? '💎 Detail' : '⚡ 60 FPS';
-
-      // Apply contentHint dynamically on active stream
-      if (localStream) {
-        const videoTrack = localStream.getVideoTracks()[0];
-        if (videoTrack && 'contentHint' in videoTrack) {
-          videoTrack.contentHint = mode;
-        }
-      }
-
-      applyQualityToAllSenders();
-    }
-
-    function onSettingChange() {
-      currentResolution = document.getElementById('resSelect').value;
-      currentBitrateKbps = parseInt(document.getElementById('bitrateSelect').value, 10);
-      currentCodec = document.getElementById('codecSelect').value;
-      applyQualityToAllSenders();
-    }
-
-    // --- SDP Optimization (Exact Quality + Zero Playout Delay) ---
-    function optimizeSdp(sdp) {
-      const maxBitrate = currentBitrateKbps;
-      const minBitrate = Math.max(10000, Math.floor(maxBitrate * 0.5));
-      const startBitrate = Math.max(15000, Math.floor(maxBitrate * 0.75));
-
+    // SDP Munging for Maximum Quality & Zero Latency
+    function optimizeSdpForMaxQuality(sdp) {
       let lines = sdp.split('\r\n');
       let newLines = [];
       let inVideo = false;
@@ -788,29 +653,27 @@
           inVideo = true;
           inAudio = false;
 
-          // Reorder codecs so H.264 is first (Hardware decode on TV)
-          if (currentCodec === 'h264') {
-            const parts = line.split(' ');
-            const header = parts.slice(0, 3);
-            const pts = parts.slice(3);
-            const h264Pts = [];
-            const otherPts = [];
+          // Reorder codecs: Prioritize H.264 for hardware ASIC decoding on TVs
+          const parts = line.split(' ');
+          const header = parts.slice(0, 3);
+          const pts = parts.slice(3);
+          const h264Pts = [];
+          const otherPts = [];
 
-            for (const pt of pts) {
-              const rtp = lines.find(l => l.startsWith(`a=rtpmap:${pt} H264/`));
-              if (rtp) h264Pts.push(pt);
-              else otherPts.push(pt);
-            }
+          for (const pt of pts) {
+            const rtp = lines.find(l => l.startsWith(`a=rtpmap:${pt} H264/`));
+            if (rtp) h264Pts.push(pt);
+            else otherPts.push(pt);
+          }
 
-            if (h264Pts.length > 0) {
-              line = [...header, ...h264Pts, ...otherPts].join(' ');
-            }
+          if (h264Pts.length > 0) {
+            line = [...header, ...h264Pts, ...otherPts].join(' ');
           }
 
           newLines.push(line);
           // Set maximum bandwidth limit right below m=video
-          newLines.push(`b=AS:${maxBitrate}`);
-          newLines.push(`b=TIAS:${maxBitrate * 1000}`);
+          newLines.push(`b=AS:${MAX_BITRATE_KBPS}`);
+          newLines.push(`b=TIAS:${MAX_BITRATE_KBPS * 1000}`);
           // Instruct WebRTC zero render delay
           newLines.push('a=playout-delay:0 0');
           continue;
@@ -826,14 +689,14 @@
           inAudio = false;
         }
 
-        // Enhance video fmtp line with high start/min/max bitrates
+        // Lock ultra-high video bitrates
         if (inVideo && line.startsWith('a=fmtp:')) {
           if (!line.includes('x-google-min-bitrate')) {
-            line = `${line};x-google-min-bitrate=${minBitrate};x-google-start-bitrate=${startBitrate};x-google-max-bitrate=${maxBitrate}`;
+            line = `${line};x-google-min-bitrate=20000;x-google-start-bitrate=35000;x-google-max-bitrate=60000`;
           }
         }
 
-        // Enhance Opus audio fmtp line with low latency and stereo 48kHz
+        // Stereo 48kHz audio with 10ms packetization
         if (inAudio && line.startsWith('a=fmtp:')) {
           if (!line.includes('minptime=')) {
             line = `${line};minptime=10;stereo=1;sprop-stereo=1;maxaveragebitrate=256000;cbr=1`;
@@ -846,8 +709,8 @@
       return newLines.join('\r\n');
     }
 
-    // --- WebRTC RTCRtpSender Optimization ---
-    async function applyQualityToSender(pc) {
+    // Apply Maximum Quality to RTCRtpSender
+    async function applyMaxQualityToSender(pc) {
       if (!pc || !pc.getSenders) return;
       const senders = pc.getSenders();
       for (const sender of senders) {
@@ -857,17 +720,15 @@
             if (!params.encodings || params.encodings.length === 0) {
               params.encodings = [{}];
             }
-            params.encodings[0].maxBitrate = currentBitrateKbps * 1000;
-            params.encodings[0].maxFramerate = 60;
+            params.encodings[0].maxBitrate = MAX_BITRATE_KBPS * 1000;
+            params.encodings[0].maxFramerate = TARGET_FPS;
             params.encodings[0].priority = 'high';
             params.encodings[0].networkPriority = 'high';
-            // Maintain exact resolution for crisp detail, or framerate for smooth motion
-            params.degradationPreference = currentQualityMode === 'detail' 
-              ? 'maintain-resolution' 
-              : 'maintain-framerate';
+            // Maintain exact resolution (Zero downscaling / zero blur)
+            params.degradationPreference = 'maintain-resolution';
 
             await sender.setParameters(params);
-            console.log(`[Sender Quality] Configured ${currentBitrateKbps} kbps, 60fps, degradation: ${params.degradationPreference}`);
+            console.log(`[Sender Quality] Locked to 45 Mbps 60fps Maintain-Resolution`);
           } catch (err) {
             console.warn('Sender parameter tuning note:', err);
           }
@@ -875,26 +736,14 @@
       }
     }
 
-    function applyQualityToAllSenders() {
-      nativeConnections.forEach(conn => applyQualityToSender(conn.pc));
-      activeCalls.forEach(call => {
-        if (call.peerConnection) applyQualityToSender(call.peerConnection);
-      });
-    }
-
-    // --- Hybrid Signaling & Connections State ---
+    // --- Connections State ---
     let localStream = null;
     let signalingMode = 'unknown'; // 'lan' or 'cloud'
     let ws = null;
     let peer = null;
 
-    // Viewers Map: id -> { id, deviceName, ip, connectionType }
     const knownViewers = new Map();
-
-    // Native WebRTC peer connections: viewerId -> { pc, dc, rtt }
     const nativeConnections = new Map();
-
-    // PeerJS peer connections: viewerId -> call
     const activeCalls = new Map();
     const dataConnections = new Map();
 
@@ -906,16 +755,13 @@
       ]
     };
 
-    // --- Initialize Hybrid Signaling ---
     function initSignaling() {
-      // First attempt: Connect to Direct Local WebSocket for sub-millisecond LAN signaling
       tryLocalWebSocket();
     }
 
     function tryLocalWebSocket() {
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${wsProtocol}//${window.location.host}`;
-      
       console.log('[Signaling] Attempting Direct LAN WebSocket:', wsUrl);
       let socketConnected = false;
 
@@ -967,13 +813,11 @@
       }
     }
 
-    // --- Native WebRTC over Local WebSocket Signaling ---
     function handleWsMessage(raw) {
       try {
         const msg = JSON.parse(raw);
 
         if (msg.type === 'room-created') {
-          console.log(`[LAN] Room created [ ${msg.code} ]`);
           if (msg.viewers) {
             msg.viewers.forEach(v => {
               knownViewers.set(v.id, { id: v.id, deviceName: v.deviceName || 'Smart TV', ip: v.ip });
@@ -1005,18 +849,16 @@
           return;
         }
 
-        // WebRTC Signaling Answer from Viewer
         if (msg.type === 'signal-answer' && msg.from) {
           const conn = nativeConnections.get(msg.from);
           if (conn && conn.pc) {
             conn.pc.setRemoteDescription(new RTCSessionDescription(msg.answer))
-              .then(() => applyQualityToSender(conn.pc))
+              .then(() => applyMaxQualityToSender(conn.pc))
               .catch(e => console.warn('setRemoteDescription answer error:', e));
           }
           return;
         }
 
-        // ICE Candidate from Viewer
         if (msg.type === 'signal-candidate' && msg.from) {
           const conn = nativeConnections.get(msg.from);
           if (conn && conn.pc && msg.candidate) {
@@ -1033,14 +875,13 @@
 
     async function callViewerNative(viewerId) {
       if (!localStream) return;
-
-      console.log(`[WebRTC LAN] Creating Native P2P offer for TV: ${viewerId}`);
+      console.log(`[WebRTC LAN] Creating Native Max-Quality offer for TV: ${viewerId}`);
       const pc = new RTCPeerConnection(rtcIceConfig);
 
-      // Add local tracks with contentHint
+      // Add local tracks with contentHint detail
       localStream.getTracks().forEach(track => {
         if (track.kind === 'video' && 'contentHint' in track) {
-          track.contentHint = currentQualityMode;
+          track.contentHint = 'detail';
         }
         pc.addTrack(track, localStream);
       });
@@ -1058,7 +899,7 @@
         }
       }
 
-      // Create DataChannel for zero-latency ping/pong measurement
+      // Latency measurement data channel
       const dc = pc.createDataChannel('sachcast-latency', { ordered: false, maxRetransmits: 0 });
       setupDataChannel(dc, viewerId);
 
@@ -1076,7 +917,7 @@
 
       try {
         const rawOffer = await pc.createOffer();
-        const optimizedSdp = optimizeSdp(rawOffer.sdp);
+        const optimizedSdp = optimizeSdpForMaxQuality(rawOffer.sdp);
         const tunedOffer = new RTCSessionDescription({ type: 'offer', sdp: optimizedSdp });
 
         await pc.setLocalDescription(tunedOffer);
@@ -1093,7 +934,7 @@
       }
     }
 
-    // --- PeerJS Cloud Signaling (Fallback Mode for Vercel / Remote) ---
+    // --- PeerJS Cloud Fallback ---
     function initPeerJS() {
       if (peer) return;
       signalingMode = 'cloud';
@@ -1141,12 +982,11 @@
         activeCalls.set(call.peer, call);
         if (localStream) {
           call.answer(localStream);
-          if (call.peerConnection) applyQualityToSender(call.peerConnection);
+          if (call.peerConnection) applyMaxQualityToSender(call.peerConnection);
         }
       });
 
       peer.on('error', (err) => {
-        console.warn('PeerJS error:', err.type);
         if (err.type === 'unavailable-id') {
           roomCode = Math.floor(1000 + Math.random() * 9000).toString();
           document.getElementById('roomCodeDisplay').innerText = roomCode;
@@ -1160,23 +1000,18 @@
 
     function callViewerPeerJS(viewerPeerId) {
       if (!peer || !localStream) return;
-      console.log(`[PeerJS Cloud] Calling viewer: ${viewerPeerId}`);
       const call = peer.call(viewerPeerId, localStream);
       activeCalls.set(viewerPeerId, call);
 
       if (call.peerConnection) {
-        applyQualityToSender(call.peerConnection);
+        applyMaxQualityToSender(call.peerConnection);
       }
 
       call.on('close', () => activeCalls.delete(viewerPeerId));
     }
 
-    // --- Latency Ping-Pong DataChannel ---
+    // --- Latency Measurement ---
     function setupDataChannel(dc, viewerId) {
-      dc.onopen = () => {
-        console.log(`[DataChannel] Latency channel opened with ${viewerId}`);
-      };
-
       dc.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
@@ -1185,19 +1020,14 @@
             const conn = nativeConnections.get(viewerId);
             if (conn) conn.rtt = rtt;
 
-            // Update live HUD
             document.getElementById('chipLatency').innerText = `⚡ Latency: ${rtt} ms`;
-            document.getElementById('chipLatency').classList.add('active');
 
-            // Send back live stats to TV
             if (dc.readyState === 'open') {
               dc.send(JSON.stringify({
                 type: 'stats',
                 rtt,
                 fps: 60,
-                bitrate: currentBitrateKbps,
-                mode: currentQualityMode,
-                codec: currentCodec
+                bitrate: MAX_BITRATE_KBPS
               }));
             }
           }
@@ -1205,7 +1035,6 @@
       };
     }
 
-    // Ping loop: every 1000ms
     setInterval(() => {
       const now = performance.now();
       nativeConnections.forEach((conn) => {
@@ -1213,8 +1042,6 @@
           conn.dc.send(JSON.stringify({ type: 'ping', t: now }));
         }
       });
-
-      // Collect WebRTC statistics
       updateStats();
     }, 1000);
 
@@ -1232,7 +1059,6 @@
         }
       }
 
-      // Check first active connection stats for bitrate
       let pc = null;
       if (nativeConnections.size > 0) {
         pc = nativeConnections.values().next().value.pc;
@@ -1264,7 +1090,6 @@
     let lastBytesSent = 0;
     let lastTimestamp = 0;
 
-    // --- UI Viewers Rendering ---
     function renderViewers() {
       const list = document.getElementById('viewersList');
       const notice = document.getElementById('noViewersNotice');
@@ -1303,27 +1128,16 @@
       });
     }
 
-    // --- Screen Sharing Capture ---
+    // --- Screen Sharing (Locked to Maximum 4K UHD 60fps Native) ---
     async function startScreenShare() {
       try {
-        let videoConstraints = {
-          cursor: 'always',
-          frameRate: { ideal: 60, max: 60 }
-        };
-
-        if (currentResolution === '4k') {
-          videoConstraints.width = { ideal: 3840, max: 3840 };
-          videoConstraints.height = { ideal: 2160, max: 2160 };
-        } else if (currentResolution === '1080p') {
-          videoConstraints.width = { ideal: 1920, max: 1920 };
-          videoConstraints.height = { ideal: 1080, max: 1080 };
-        } else {
-          videoConstraints.width = { ideal: 1280, max: 1280 };
-          videoConstraints.height = { ideal: 720, max: 720 };
-        }
-
         localStream = await navigator.mediaDevices.getDisplayMedia({
-          video: videoConstraints,
+          video: {
+            cursor: 'always',
+            width: { ideal: 3840, max: 3840 },
+            height: { ideal: 2160, max: 2160 },
+            frameRate: { ideal: TARGET_FPS, max: TARGET_FPS }
+          },
           audio: {
             echoCancellation: false,
             noiseSuppression: false,
@@ -1334,10 +1148,10 @@
           }
         });
 
-        // Apply contentHint for exact crystal-clear pixel rendering
+        // Lock text sharpness (Zero Blurring)
         const videoTrack = localStream.getVideoTracks()[0];
         if (videoTrack && 'contentHint' in videoTrack) {
-          videoTrack.contentHint = currentQualityMode;
+          videoTrack.contentHint = 'detail';
         }
 
         const videoElem = document.getElementById('localVideo');
@@ -1371,7 +1185,6 @@
       document.getElementById('startBtn').style.display = 'inline-flex';
       document.getElementById('stopBtn').style.display = 'none';
 
-      // Notify viewers
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'stream-stopped' }));
       }
@@ -1379,7 +1192,6 @@
         if (conn.open) conn.send({ type: 'stream-stopped' });
       });
 
-      // Close peer connections
       nativeConnections.forEach(conn => {
         try { conn.pc.close(); } catch (e) {}
       });

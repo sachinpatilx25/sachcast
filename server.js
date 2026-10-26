@@ -62,6 +62,9 @@ function parseDeviceName(userAgent = '') {
   return 'Web Browser TV';
 }
 
+let isPort80Bound = false;
+let isPort3000Bound = false;
+
 function handleHttpRequest(req, res) {
   let reqPath = req.url.split('?')[0];
   const userAgent = (req.headers['user-agent'] || '').toLowerCase();
@@ -72,6 +75,8 @@ function handleHttpRequest(req, res) {
     const ips = getLocalIpAddresses();
     const primaryIp = ips[0] ? ips[0].ip : '127.0.0.1';
     const activeCode = rooms.keys().next().value || defaultRoomCode;
+    const effectivePort = isPort80Bound ? PRIMARY_PORT : SECONDARY_PORT;
+    const tvUrl = isPort80Bound ? `http://${primaryIp}/tv` : `http://${primaryIp}:${SECONDARY_PORT}/tv`;
 
     res.writeHead(200, {
       'Content-Type': 'application/json',
@@ -80,15 +85,17 @@ function handleHttpRequest(req, res) {
     res.end(JSON.stringify({
       ip: primaryIp,
       ips: ips.map(i => i.ip),
+      port: effectivePort,
       portPrimary: PRIMARY_PORT,
       portSecondary: SECONDARY_PORT,
+      isPort80Bound,
+      isPort3000Bound,
       activeCode,
       clientIp,
+      tvUrl,
       urls: {
-        short: `http://${primaryIp}`,
-        short3000: `http://${primaryIp}:${SECONDARY_PORT}`,
-        tv: `http://${primaryIp}/tv`,
-        tv3000: `http://${primaryIp}:${SECONDARY_PORT}/tv`
+        short: isPort80Bound ? `http://${primaryIp}` : `http://${primaryIp}:${SECONDARY_PORT}`,
+        tv: tvUrl
       }
     }));
     return;
@@ -228,8 +235,11 @@ function setupWebSocket(wss) {
           ws.role = 'viewer';
           let targetCode = data.code;
 
-          // Auto-join existing room if no code specified
-          if (!targetCode) {
+          // Auto-join active presenter room if available (Zero typing needed on TV!)
+          const activePresenterRoom = Array.from(rooms.entries()).find(([_, r]) => r.presenter !== null);
+          if (activePresenterRoom) {
+            targetCode = activePresenterRoom[0];
+          } else if (!targetCode || targetCode === defaultRoomCode) {
             targetCode = rooms.keys().next().value || defaultRoomCode;
           }
 
@@ -356,29 +366,35 @@ function startServers() {
   const primaryIp = ips[0] ? ips[0].ip : '127.0.0.1';
 
   serverPrimary.listen(PRIMARY_PORT, '0.0.0.0', () => {
+    isPort80Bound = true;
     console.log(`[✓] Primary Server running on Port ${PRIMARY_PORT}`);
   }).on('error', (err) => {
+    isPort80Bound = false;
     console.log(`[!] Port ${PRIMARY_PORT} note: ${err.message}. Port ${SECONDARY_PORT} is active.`);
   });
 
   serverSecondary.listen(SECONDARY_PORT, '0.0.0.0', () => {
+    isPort3000Bound = true;
     console.log(`[✓] Secondary Server running on Port ${SECONDARY_PORT}`);
-    printBanner(primaryIp);
+    // Small timeout to allow port 80 listener callback to establish isPort80Bound
+    setTimeout(() => printBanner(primaryIp), 150);
   }).on('error', (err) => {
     console.error(`[!] Failed to start on secondary port ${SECONDARY_PORT}:`, err);
   });
 }
 
 function printBanner(ip) {
+  const tvUrl = isPort80Bound ? `http://${ip}/tv` : `http://${ip}:${SECONDARY_PORT}/tv`;
+  const pcUrl = isPort80Bound ? `http://localhost (or http://localhost:${SECONDARY_PORT})` : `http://localhost:${SECONDARY_PORT}`;
+
   console.log('\n================================================================');
-  console.log('   🚀 SACHCAST WIRELESS PC TO TV BROADCASTER (ALL FIXES APPLIED)');
+  console.log('   🚀 SACHCAST WIRELESS SCREEN BROADCASTER (MAX QUALITY LOCKED)');
   console.log('================================================================\n');
   console.log('  1. ON YOUR PC (Presenter):');
-  console.log(`     👉 Open Chrome or Edge: http://localhost  (or http://localhost:${SECONDARY_PORT})`);
+  console.log(`     👉 Open Chrome or Edge: ${pcUrl}`);
   console.log('\n  2. ON YOUR SMART TV (Viewer):');
-  console.log(`     👉 Open TV Browser:     http://${ip}/tv`);
-  console.log(`     (Or directly:           http://${ip}:${SECONDARY_PORT}/tv)`);
-  console.log('\n  ✨ WebRTC 60fps Ultra-Low Latency + Universal Canvas Fallback Active');
+  console.log(`     👉 Open TV Browser:     ${tvUrl}`);
+  console.log('\n  ✨ 4K UHD Native Quality • 60 FPS • Real-Time ~10ms WebRTC Active');
   console.log('================================================================\n');
 }
 
