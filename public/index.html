@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AirCast - PC Screen Broadcast</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(20, 27, 45, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.5);
+      --success: #10b981;
+      --danger: #ef4444;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: radial-gradient(circle at 50% 0%, #1e293b 0%, #090d16 100%);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 1.1rem 2rem;
+      border-bottom: 1px solid var(--card-border);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 800;
+      font-size: 1.3rem;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.45rem 1rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #eab308;
+      animation: pulse 2s infinite;
+    }
+
+    .dot.live {
+      background: var(--success);
+      box-shadow: 0 0 10px var(--success);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    main {
+      flex: 1;
+      max-width: 1440px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.75rem 2rem;
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 1.75rem;
+    }
+
+    @media (max-width: 1080px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .preview-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      backdrop-filter: blur(16px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .preview-header {
+      padding: 1.25rem 1.75rem;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .preview-area {
+      flex: 1;
+      min-height: 480px;
+      background: #030712;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 2rem;
+      max-width: 480px;
+    }
+
+    .empty-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 24px;
+      background: rgba(59, 130, 246, 0.12);
+      color: var(--accent);
+      display: grid;
+      place-items: center;
+      margin: 0 auto 1.5rem auto;
+      border: 1px solid rgba(59, 130, 246, 0.25);
+    }
+
+    .empty-state h3 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 0.6rem;
+    }
+
+    .empty-state p {
+      color: var(--text-muted);
+      font-size: 1rem;
+      line-height: 1.6;
+      margin-bottom: 1.75rem;
+    }
+
+    .controls-bar {
+      padding: 1.25rem 1.75rem;
+      border-top: 1px solid var(--card-border);
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      background: rgba(9, 13, 22, 0.8);
+    }
+
+    button {
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      border-radius: 14px;
+      font-weight: 700;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.65rem;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+      padding: 0.9rem 2rem;
+      font-size: 1.05rem;
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.65);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      padding: 0.9rem 2rem;
+      font-size: 1.05rem;
+    }
+
+    .btn-danger:hover {
+      background: #dc2626;
+      transform: translateY(-2px);
+    }
+
+    .side-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Fast Connect Card */
+    .fast-connect-card {
+      background: linear-gradient(135deg, rgba(30, 58, 138, 0.35), rgba(20, 27, 45, 0.85));
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 24px;
+      padding: 1.75rem;
+      backdrop-filter: blur(16px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .fast-connect-card::before {
+      content: '';
+      position: absolute;
+      top: -50px;
+      right: -50px;
+      width: 140px;
+      height: 140px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.25) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .section-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    /* Big Pairing Code like Google Meet / YouTube TV */
+    .meet-code-container {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 1.25rem;
+      text-align: center;
+      margin-bottom: 1.25rem;
+    }
+
+    .meet-code-label {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+      font-weight: 600;
+    }
+
+    .meet-code-display {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 2.6rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      color: #60a5fa;
+      text-shadow: 0 0 20px rgba(96, 165, 250, 0.5);
+    }
+
+    .easy-url-box {
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px dashed rgba(59, 130, 246, 0.4);
+      padding: 1rem 1.2rem;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .easy-url-content {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.05rem;
+      color: #93c5fd;
+      font-weight: 600;
+    }
+
+    .copy-chip {
+      background: rgba(59, 130, 246, 0.2);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      padding: 0.35rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .copy-chip:hover {
+      background: rgba(59, 130, 246, 0.4);
+    }
+
+    /* TV Remote Instructions */
+    .tv-steps {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      margin-top: 1.25rem;
+    }
+
+    .tv-steps li {
+      display: flex;
+      gap: 0.8rem;
+      align-items: flex-start;
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    .tv-steps strong {
+      color: var(--text);
+    }
+
+    .badge-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #3b82f6;
+      color: white;
+      font-weight: 700;
+      display: grid;
+      place-items: center;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* QR Code Card */
+    .qr-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 1.5rem;
+      backdrop-filter: blur(16px);
+      text-align: center;
+    }
+
+    #qrcode {
+      display: flex;
+      justify-content: center;
+      margin: 1.25rem auto;
+      padding: 1rem;
+      background: white;
+      border-radius: 16px;
+      width: fit-content;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect>
+          <polyline points="17 2 12 7 7 2"></polyline>
+        </svg>
+      </div>
+      <span>AirCast Broadcast</span>
+    </div>
+
+    <div class="status-pill">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">Connecting...</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- Left Screen Stream Area -->
+    <div class="preview-card">
+      <div class="preview-header">
+        <div>
+          <h2 style="font-size: 1.2rem; font-weight: 700;">Broadcast Feed</h2>
+          <span style="font-size: 0.85rem; color: var(--text-muted);" id="viewersCount">0 TV(s) Connected</span>
+        </div>
+        <div class="status-pill" id="liveBadge" style="display: none; background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #34d399;">
+          ● BROADCASTING LIVE
+        </div>
+      </div>
+
+      <div class="preview-area">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+          </div>
+          <h3>Click to Start Wireless Cast</h3>
+          <p>Share your Entire Screen, App Window, or Chrome Tab. Your TV will automatically mirror it in real-time.</p>
+          <button class="btn-primary" onclick="startScreenShare()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polygon points="10 8 16 12 10 16 10 8"></polygon>
+            </svg>
+            Share Screen
+          </button>
+        </div>
+        <video id="localVideo" autoplay playsinline muted style="display: none;"></video>
+      </div>
+
+      <div class="controls-bar">
+        <button id="startBtn" class="btn-primary" onclick="startScreenShare()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
+          </svg>
+          Share Screen
+        </button>
+
+        <button id="stopBtn" class="btn-danger" style="display: none;" onclick="stopScreenShare()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <rect x="6" y="6" width="12" height="12"></rect>
+          </svg>
+          Stop Sharing
+        </button>
+      </div>
+    </div>
+
+    <!-- Right Side Connection Helpers -->
+    <div class="side-panel">
+      <!-- Easy TV Connect Box -->
+      <div class="fast-connect-card">
+        <div class="section-title">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.2">
+            <rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect>
+            <polyline points="17 2 12 7 7 2"></polyline>
+          </svg>
+          Connect Your TV (Easiest Method)
+        </div>
+
+        <!-- Big 4-digit code -->
+        <div class="meet-code-container">
+          <div class="meet-code-label">Meeting TV Code</div>
+          <div class="meet-code-display" id="roomCodeDisplay">----</div>
+        </div>
+
+        <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.6rem;">
+          On your TV browser, simply open:
+        </div>
+        <div class="easy-url-box">
+          <span class="easy-url-content" id="shortTvUrl">http://.../tv</span>
+          <button class="copy-chip" onclick="copyShortUrl()">Copy</button>
+        </div>
+
+        <ul class="tv-steps">
+          <li>
+            <span class="badge-num">1</span>
+            <span>Open your TV's browser (Samsung, LG, FireStick, Android TV).</span>
+          </li>
+          <li>
+            <span class="badge-num">2</span>
+            <span>Type the short URL above.</span>
+          </li>
+          <li>
+            <span class="badge-num">3</span>
+            <span>It will <strong>automatically connect</strong> to your screen! (or enter code if prompted).</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Mobile / Tablet Instant QR -->
+      <div class="qr-card">
+        <h4 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.4rem;">Scan with Phone / Tablet</h4>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Point your camera at this QR code to watch the screen immediately:</p>
+        <div id="qrcode"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let ws = null;
+    let localStream = null;
+    let peerConnections = new Map(); // viewerId -> RTCPeerConnection
+    let myId = null;
+    let currentRoomCode = null;
+    let fullTvUrl = '';
+
+    const rtcConfig = {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+      ]
+    };
+
+    // Fetch dynamic IP & configuration from the server
+    async function loadServerInfo() {
+      try {
+        const res = await fetch('/api/info');
+        const data = await res.json();
+        fullTvUrl = data.tvUrl;
+        document.getElementById('shortTvUrl').innerText = fullTvUrl;
+
+        // Render QR
+        document.getElementById('qrcode').innerHTML = '';
+        new QRCode(document.getElementById('qrcode'), {
+          text: fullTvUrl,
+          width: 150,
+          height: 150,
+          colorDark: "#000000",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      } catch (e) {
+        console.error('Failed to get server info:', e);
+      }
+    }
+
+    function copyShortUrl() {
+      navigator.clipboard.writeText(fullTvUrl);
+      alert('Copied URL to clipboard: ' + fullTvUrl);
+    }
+
+    function connectSignaling() {
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${window.location.host}`;
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        document.getElementById('statusDot').classList.add('live');
+        document.getElementById('statusText').innerText = 'Online (Ready)';
+        ws.send(JSON.stringify({ type: 'register-presenter' }));
+      };
+
+      ws.onmessage = async (event) => {
+        const msg = JSON.parse(event.data);
+
+        if (msg.type === 'welcome') {
+          myId = msg.id;
+        } else if (msg.type === 'room-created') {
+          currentRoomCode = msg.code;
+          document.getElementById('roomCodeDisplay').innerText = msg.code;
+        } else if (msg.type === 'viewer-joined') {
+          updateViewers(msg.viewersCount);
+          if (localStream) {
+            await setupPeerConnection(msg.id, true);
+          }
+        } else if (msg.type === 'viewer-left') {
+          if (peerConnections.has(msg.id)) {
+            peerConnections.get(msg.id).close();
+            peerConnections.delete(msg.id);
+            updateViewers(peerConnections.size);
+          }
+        } else if (msg.type === 'answer') {
+          const pc = peerConnections.get(msg.from);
+          if (pc) {
+            await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+          }
+        } else if (msg.type === 'ice-candidate') {
+          const pc = peerConnections.get(msg.from);
+          if (pc && msg.candidate) {
+            try {
+              await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
+            } catch (err) {
+              console.error('Error adding candidate:', err);
+            }
+          }
+        }
+      };
+
+      ws.onclose = () => {
+        document.getElementById('statusDot').classList.remove('live');
+        document.getElementById('statusText').innerText = 'Reconnecting...';
+        setTimeout(connectSignaling, 2000);
+      };
+    }
+
+    async function setupPeerConnection(viewerId, isInitiator) {
+      if (peerConnections.has(viewerId)) {
+        peerConnections.get(viewerId).close();
+      }
+
+      const pc = new RTCPeerConnection(rtcConfig);
+      peerConnections.set(viewerId, pc);
+
+      if (localStream) {
+        localStream.getTracks().forEach(track => {
+          pc.addTrack(track, localStream);
+        });
+      }
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate && ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'ice-candidate',
+            target: viewerId,
+            candidate: event.candidate
+          }));
+        }
+      };
+
+      if (isInitiator) {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        ws.send(JSON.stringify({
+          type: 'offer',
+          target: viewerId,
+          sdp: pc.localDescription
+        }));
+      }
+    }
+
+    function updateViewers(count) {
+      const num = count !== undefined ? count : peerConnections.size;
+      document.getElementById('viewersCount').innerText = `${num} TV(s) Connected`;
+    }
+
+    async function startScreenShare() {
+      try {
+        localStream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            cursor: 'always',
+            frameRate: { ideal: 60, max: 60 },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false
+          }
+        });
+
+        const videoElem = document.getElementById('localVideo');
+        videoElem.srcObject = localStream;
+        videoElem.style.display = 'block';
+        document.getElementById('emptyState').style.display = 'none';
+        document.getElementById('startBtn').style.display = 'none';
+        document.getElementById('stopBtn').style.display = 'inline-flex';
+        document.getElementById('liveBadge').style.display = 'inline-flex';
+
+        // Connect any waiting viewers immediately
+        for (const [viewerId, _] of peerConnections) {
+          await setupPeerConnection(viewerId, true);
+        }
+
+        localStream.getVideoTracks()[0].onended = () => {
+          stopScreenShare();
+        };
+
+      } catch (err) {
+        console.warn('Screen share canceled:', err);
+      }
+    }
+
+    function stopScreenShare() {
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+
+      document.getElementById('localVideo').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'block';
+      document.getElementById('startBtn').style.display = 'inline-flex';
+      document.getElementById('stopBtn').style.display = 'none';
+      document.getElementById('liveBadge').style.display = 'none';
+    }
+
+    loadServerInfo();
+    connectSignaling();
+  </script>
+</body>
+</html>
