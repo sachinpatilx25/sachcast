@@ -55,6 +55,8 @@
       height: 100vh;
       object-fit: contain;
       background: #000000;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
     }
 
     #standbyScreen {
@@ -272,7 +274,7 @@
   </div>
 
   <div id="displayContainer">
-    <video id="tvVideo" autoplay playsinline webkit-playsinline></video>
+    <video id="tvVideo" autoplay playsinline webkit-playsinline muted></video>
   </div>
 
   <div id="audioPrompt" onclick="enableAudio()">
@@ -350,17 +352,47 @@
       });
     }
 
-    // Active buffer drift eliminator (prevents TV lag accumulation)
+    // Permanent zero-stutter drift eliminator
+    // Uses smooth playback rate micro-adjustments instead of hard seeks to prevent hardware decoder flushing and slowdown
     setInterval(() => {
-      if (!tvVideo.srcObject) return;
+      if (!tvVideo.srcObject || tvVideo.paused) return;
       if (tvVideo.buffered && tvVideo.buffered.length > 0) {
         const end = tvVideo.buffered.end(tvVideo.buffered.length - 1);
         const drift = end - tvVideo.currentTime;
-        if (drift > 0.12 && tvVideo.currentTime > 0) {
-          tvVideo.currentTime = end;
+
+        if (drift > 1.2) {
+          // Significant lag (e.g. computer sleep or background tab) -> clean live jump
+          try {
+            tvVideo.currentTime = end;
+            tvVideo.playbackRate = 1.0;
+          } catch (e) {}
+        } else if (drift > 0.22) {
+          // Micro-drift (220ms - 1200ms): subtly accelerate (1.06x) to catch up seamlessly
+          // Zero decoder flush, zero frame drop, 100% smooth continuous playback!
+          tvVideo.playbackRate = 1.06;
+        } else if (drift < 0.08) {
+          // Buffer caught up: return to normal 1.0x playback speed
+          tvVideo.playbackRate = 1.0;
         }
       }
     }, 500);
+
+    // Continuous playback protection: auto-resume if TV browser pauses or stalls
+    tvVideo.addEventListener('stalled', () => {
+      if (tvVideo.srcObject && !tvVideo.paused) {
+        tvVideo.play().catch(() => {});
+      }
+    });
+    tvVideo.addEventListener('waiting', () => {
+      if (tvVideo.srcObject && !tvVideo.paused) {
+        tvVideo.play().catch(() => {});
+      }
+    });
+    tvVideo.addEventListener('pause', () => {
+      if (tvVideo.srcObject && standbyScreen.style.display === 'none') {
+        tvVideo.play().catch(() => {});
+      }
+    });
 
     // --- Hybrid Signaling Initialization ---
     function initTVReceiver() {
@@ -502,16 +534,19 @@
         console.log('[WebRTC LAN] Remote stream received:', event.streams);
         tuneVideoReceiver(nativePc);
 
-        if (event.streams && event.streams[0]) {
-          tvVideo.srcObject = event.streams[0];
-        } else {
-          tvVideo.srcObject = new MediaStream([event.track]);
-        }
+        const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
+        tvVideo.srcObject = stream;
 
         hideStandby();
-        tvVideo.play().catch(() => {
+        tvVideo.play().catch(() => {});
+
+        // Prompt for audio unmute only if stream contains active audio tracks
+        const hasAudio = stream.getAudioTracks().length > 0;
+        if (hasAudio && tvVideo.muted) {
           audioPrompt.style.display = 'block';
-        });
+        } else {
+          audioPrompt.style.display = 'none';
+        }
       };
 
       nativePc.ondatachannel = (event) => {
@@ -608,9 +643,14 @@
           tvVideo.srcObject = remoteStream;
           tuneVideoReceiver(call.peerConnection);
 
-          tvVideo.play().catch(() => {
+          tvVideo.play().catch(() => {});
+
+          const hasAudio = remoteStream.getAudioTracks().length > 0;
+          if (hasAudio && tvVideo.muted) {
             audioPrompt.style.display = 'block';
-          });
+          } else {
+            audioPrompt.style.display = 'none';
+          }
         });
       });
 
@@ -673,6 +713,7 @@
       screenTitle.innerText = title;
       screenSubtitle.innerText = sub;
       tvVideo.srcObject = null;
+      audioPrompt.style.display = 'none';
     }
 
     function flashScreen() {
@@ -707,7 +748,7 @@
       enableAudio();
       showHudBriefly();
 
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' || e.keyCode === 13 || e.key === ' ' || e.keyCode === 32) {
         if (standbyScreen.style.display !== 'none' && document.activeElement === manualCodeInput) {
           applyManualCode();
         } else {

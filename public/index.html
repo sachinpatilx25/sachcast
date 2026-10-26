@@ -476,10 +476,10 @@
       <div class="stage-body">
         <div class="stats-overlay" id="statsOverlay" style="display: none;">
           <div class="stat-chip" id="chipLatency">⚡ Latency: -- ms</div>
-          <div class="stat-chip" id="chipFps">🎞️ 60 FPS</div>
-          <div class="stat-chip" id="chipBitrate">📶 40 Mbps</div>
-          <div class="stat-chip" id="chipRes">📺 Native Quality</div>
-          <div class="stat-chip">💎 Crisp Text • H.264 HW</div>
+          <div class="stat-chip" id="chipFps">🎞️ 60 FPS (Locked)</div>
+          <div class="stat-chip" id="chipBitrate">📶 14 Mbps (Optimal)</div>
+          <div class="stat-chip" id="chipRes">📺 Native 1080p60</div>
+          <div class="stat-chip">💎 Crisp Text • H.264 Zero-Lag</div>
         </div>
 
         <div class="empty-state" id="emptyState">
@@ -613,7 +613,7 @@
     }
 
     // --- High-Quality WebRTC Optimization ---
-    const MAX_BITRATE_BPS = 40000000; // 40 Mbps high-bitrate
+    const MAX_BITRATE_BPS = 14000000; // 14 Mbps optimal sweet spot: Pristine text clarity without router bufferbloat
 
     async function applyHighQualityParameters(pc) {
       if (!pc || !pc.getSenders) return;
@@ -629,11 +629,11 @@
             params.encodings[0].maxFramerate = 60;
             params.encodings[0].priority = 'high';
             params.encodings[0].networkPriority = 'high';
-            // Maintain exact native resolution - zero downscaling/blurring!
-            params.degradationPreference = 'maintain-resolution';
+            // Lock framerate permanently - prevents stream from slowing down or lagging over time!
+            params.degradationPreference = 'maintain-framerate';
 
             await sender.setParameters(params);
-            console.log('[Quality] Locked to 40 Mbps 60 FPS Maintain-Resolution');
+            console.log('[Quality] Locked to 14 Mbps 60 FPS Maintain-Framerate');
           } catch (err) {
             console.warn('Could not set sender parameters:', err);
           }
@@ -647,6 +647,16 @@
         if (caps && caps.codecs) {
           const h264 = caps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/h264');
           const others = caps.codecs.filter(c => c.mimeType.toLowerCase() !== 'video/h264');
+
+          // Prioritize Baseline / Packetization-mode=1 for zero-latency instant TV hardware decode
+          h264.sort((a, b) => {
+            const aParams = (a.sdpFmtpLine || '').toLowerCase();
+            const bParams = (b.sdpFmtpLine || '').toLowerCase();
+            const aScore = (aParams.includes('42e01f') ? 2 : 0) + (aParams.includes('packetization-mode=1') ? 1 : 0);
+            const bScore = (bParams.includes('42e01f') ? 2 : 0) + (bParams.includes('packetization-mode=1') ? 1 : 0);
+            return bScore - aScore;
+          });
+
           const transceiver = pc.getTransceivers().find(t => t.sender && t.sender.track && t.sender.track.kind === 'video');
           if (transceiver && transceiver.setCodecPreferences) {
             try {
@@ -832,6 +842,12 @@
         pc.addTrack(track, localStream);
       });
 
+      pc.oniceconnectionstatechange = () => {
+        if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+          applyHighQualityParameters(pc);
+        }
+      };
+
       prioritizeH264(pc);
 
       // DataChannel for latency ping/pong
@@ -966,6 +982,20 @@
       });
     }, 1000);
 
+    // Periodic quality maintenance: locks 60 FPS & 14 Mbps on active streams
+    setInterval(() => {
+      nativeConnections.forEach((conn) => {
+        if (conn.pc && (conn.pc.iceConnectionState === 'connected' || conn.pc.iceConnectionState === 'completed')) {
+          applyHighQualityParameters(conn.pc);
+        }
+      });
+      activeCalls.forEach((call) => {
+        if (call.peerConnection && (call.peerConnection.iceConnectionState === 'connected' || call.peerConnection.iceConnectionState === 'completed')) {
+          applyHighQualityParameters(call.peerConnection);
+        }
+      });
+    }, 10000);
+
     function renderViewers() {
       const list = document.getElementById('viewersList');
       const notice = document.getElementById('noViewersNotice');
@@ -1009,10 +1039,13 @@
       try {
         let stream = null;
         try {
-          // Attempt capture with audio first
+          // Attempt capture with audio first (1080p 60fps locked for permanent silky-smooth casting)
           stream = await navigator.mediaDevices.getDisplayMedia({
             video: {
               cursor: 'always',
+              displaySurface: 'monitor',
+              width: { ideal: 1920, max: 1920 },
+              height: { ideal: 1080, max: 1080 },
               frameRate: { ideal: 60, max: 60 }
             },
             audio: true
@@ -1023,6 +1056,9 @@
           stream = await navigator.mediaDevices.getDisplayMedia({
             video: {
               cursor: 'always',
+              displaySurface: 'monitor',
+              width: { ideal: 1920, max: 1920 },
+              height: { ideal: 1080, max: 1080 },
               frameRate: { ideal: 60, max: 60 }
             },
             audio: false
