@@ -44,7 +44,6 @@
       object-fit: contain;
     }
 
-    /* Standby overlay */
     #standbyScreen {
       position: absolute;
       inset: 0;
@@ -91,7 +90,6 @@
       margin-bottom: 2rem;
     }
 
-    /* Fast Code Prompt on TV (if user needs to enter 4 digits) */
     .code-box-wrapper {
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -130,10 +128,6 @@
       box-shadow: 0 4px 20px rgba(59, 130, 246, 0.5);
     }
 
-    .connect-btn:hover {
-      background: #2563eb;
-    }
-
     .status-badge {
       margin-top: 1.75rem;
       display: inline-flex;
@@ -156,7 +150,6 @@
       box-shadow: 0 0 10px #10b981;
     }
 
-    /* TV Remote Controls Floating */
     .tv-hud {
       position: absolute;
       top: 1.5rem;
@@ -214,9 +207,8 @@
     </div>
 
     <h1 id="screenTitle">Connected to AirCast</h1>
-    <p id="screenSubtitle">Auto-connecting to your PC screen. Please wait...</p>
+    <p id="screenSubtitle">Auto-syncing with your PC. Please wait...</p>
 
-    <!-- Optional Manual TV Code Input (if needed) -->
     <div class="code-box-wrapper" id="codeBoxWrapper" style="display: none;">
       <input type="text" id="manualCode" class="code-input" maxlength="4" placeholder="Code">
       <button class="connect-btn" onclick="submitManualCode()">Connect</button>
@@ -249,6 +241,7 @@
     let pc = null;
     let myId = null;
     let presenterId = null;
+    let pendingCandidates = [];
 
     const rtcConfig = {
       iceServers: [
@@ -264,7 +257,6 @@
 
       ws.onopen = () => {
         statusLabel.innerText = 'Connected to local Wi-Fi hub';
-        // Auto-join the active PC screen broadcast
         ws.send(JSON.stringify({
           type: 'register-viewer',
           code: userProvidedCode || null
@@ -279,7 +271,7 @@
         } else if (msg.type === 'join-success') {
           presenterId = msg.presenterId;
           screenTitle.innerText = 'Paired With PC!';
-          screenSubtitle.innerText = 'Screen broadcast is starting...';
+          screenSubtitle.innerText = 'Screen broadcast is ready. Click "Share Screen" on your PC if not started yet.';
           codeBoxWrapper.style.display = 'none';
         } else if (msg.type === 'waiting-for-stream') {
           screenTitle.innerText = 'Waiting for Presenter';
@@ -290,11 +282,15 @@
           presenterId = msg.from;
           await handleOffer(msg.sdp);
         } else if (msg.type === 'ice-candidate') {
-          if (pc && msg.candidate) {
-            try {
-              await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
-            } catch (err) {
-              console.error('ICE candidate error:', err);
+          if (msg.candidate) {
+            if (pc && pc.remoteDescription && pc.remoteDescription.type) {
+              try {
+                await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
+              } catch (err) {
+                console.error('ICE candidate error:', err);
+              }
+            } else {
+              pendingCandidates.push(msg.candidate);
             }
           }
         } else if (msg.type === 'presenter-left') {
@@ -335,6 +331,15 @@
       };
 
       await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+
+      // Flush any queued ICE candidates
+      while (pendingCandidates.length > 0) {
+        const cand = pendingCandidates.shift();
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(cand));
+        } catch (e) {}
+      }
+
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
@@ -374,7 +379,6 @@
       }
     }
 
-    // Remote control bindings
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         if (codeBoxWrapper.style.display === 'flex') {
@@ -390,7 +394,6 @@
       enableAudio();
     });
 
-    // Start auto connect
     connectSignaling();
   </script>
 </body>

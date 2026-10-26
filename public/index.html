@@ -232,7 +232,6 @@
       gap: 1.5rem;
     }
 
-    /* Fast Connect Card */
     .fast-connect-card {
       background: linear-gradient(135deg, rgba(30, 58, 138, 0.35), rgba(20, 27, 45, 0.85));
       border: 1px solid rgba(59, 130, 246, 0.3);
@@ -241,17 +240,6 @@
       backdrop-filter: blur(16px);
       position: relative;
       overflow: hidden;
-    }
-
-    .fast-connect-card::before {
-      content: '';
-      position: absolute;
-      top: -50px;
-      right: -50px;
-      width: 140px;
-      height: 140px;
-      background: radial-gradient(circle, rgba(59, 130, 246, 0.25) 0%, transparent 70%);
-      pointer-events: none;
     }
 
     .section-title {
@@ -263,7 +251,6 @@
       gap: 0.6rem;
     }
 
-    /* Big Pairing Code like Google Meet / YouTube TV */
     .meet-code-container {
       background: rgba(0, 0, 0, 0.4);
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -320,11 +307,6 @@
       cursor: pointer;
     }
 
-    .copy-chip:hover {
-      background: rgba(59, 130, 246, 0.4);
-    }
-
-    /* TV Remote Instructions */
     .tv-steps {
       list-style: none;
       display: flex;
@@ -360,7 +342,6 @@
       margin-top: 2px;
     }
 
-    /* QR Code Card */
     .qr-card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -401,7 +382,6 @@
   </header>
 
   <main>
-    <!-- Left Screen Stream Area -->
     <div class="preview-card">
       <div class="preview-header">
         <div>
@@ -454,9 +434,7 @@
       </div>
     </div>
 
-    <!-- Right Side Connection Helpers -->
     <div class="side-panel">
-      <!-- Easy TV Connect Box -->
       <div class="fast-connect-card">
         <div class="section-title">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.2">
@@ -466,7 +444,6 @@
           Connect Your TV (Easiest Method)
         </div>
 
-        <!-- Big 4-digit code -->
         <div class="meet-code-container">
           <div class="meet-code-label">Meeting TV Code</div>
           <div class="meet-code-display" id="roomCodeDisplay">----</div>
@@ -491,12 +468,11 @@
           </li>
           <li>
             <span class="badge-num">3</span>
-            <span>It will <strong>automatically connect</strong> to your screen! (or enter code if prompted).</span>
+            <span>It will <strong>automatically connect</strong> to your screen!</span>
           </li>
         </ul>
       </div>
 
-      <!-- Mobile / Tablet Instant QR -->
       <div class="qr-card">
         <h4 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.4rem;">Scan with Phone / Tablet</h4>
         <p style="font-size: 0.85rem; color: var(--text-muted);">Point your camera at this QR code to watch the screen immediately:</p>
@@ -509,6 +485,7 @@
     let ws = null;
     let localStream = null;
     let peerConnections = new Map(); // viewerId -> RTCPeerConnection
+    let knownViewerIds = new Set();
     let myId = null;
     let currentRoomCode = null;
     let fullTvUrl = '';
@@ -520,7 +497,6 @@
       ]
     };
 
-    // Fetch dynamic IP & configuration from the server
     async function loadServerInfo() {
       try {
         const res = await fetch('/api/info');
@@ -528,7 +504,6 @@
         fullTvUrl = data.tvUrl;
         document.getElementById('shortTvUrl').innerText = fullTvUrl;
 
-        // Render QR
         document.getElementById('qrcode').innerHTML = '';
         new QRCode(document.getElementById('qrcode'), {
           text: fullTvUrl,
@@ -568,16 +543,18 @@
           currentRoomCode = msg.code;
           document.getElementById('roomCodeDisplay').innerText = msg.code;
         } else if (msg.type === 'viewer-joined') {
+          knownViewerIds.add(msg.id);
           updateViewers(msg.viewersCount);
           if (localStream) {
             await setupPeerConnection(msg.id, true);
           }
         } else if (msg.type === 'viewer-left') {
+          knownViewerIds.delete(msg.id);
           if (peerConnections.has(msg.id)) {
             peerConnections.get(msg.id).close();
             peerConnections.delete(msg.id);
-            updateViewers(peerConnections.size);
           }
+          updateViewers(msg.viewersCount || knownViewerIds.size);
         } else if (msg.type === 'answer') {
           const pc = peerConnections.get(msg.from);
           if (pc) {
@@ -638,7 +615,7 @@
     }
 
     function updateViewers(count) {
-      const num = count !== undefined ? count : peerConnections.size;
+      const num = count !== undefined ? count : knownViewerIds.size;
       document.getElementById('viewersCount').innerText = `${num} TV(s) Connected`;
     }
 
@@ -667,7 +644,7 @@
         document.getElementById('liveBadge').style.display = 'inline-flex';
 
         // Connect any waiting viewers immediately
-        for (const [viewerId, _] of peerConnections) {
+        for (const viewerId of knownViewerIds) {
           await setupPeerConnection(viewerId, true);
         }
 

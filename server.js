@@ -22,8 +22,7 @@ function getLocalIpAddresses() {
   return addresses;
 }
 
-// In-memory Room & Pairing code management (like Google Meet / YouTube TV code)
-// e.g., 4-digit code like "4829"
+// In-memory Room & Pairing code management
 const pairingRooms = new Map(); // code -> { presenter: client, viewers: Set<client> }
 
 function generatePairingCode() {
@@ -136,7 +135,8 @@ class SimpleWebSocketServer {
       this.removeClient(client);
     });
 
-    socket.on('error', () => {
+    socket.on('error', (err) => {
+      console.warn('Socket error on client', client.id, err.message);
       this.removeClient(client);
     });
 
@@ -148,15 +148,16 @@ class SimpleWebSocketServer {
     if (client.roomCode && pairingRooms.has(client.roomCode)) {
       const room = pairingRooms.get(client.roomCode);
       if (room.presenter === client) {
-        // Presenter left: notify viewers
+        console.log(`[-] Presenter left room [ ${client.roomCode} ]`);
         for (const viewer of room.viewers) {
           this.send(viewer, { type: 'presenter-left' });
         }
         pairingRooms.delete(client.roomCode);
       } else {
         room.viewers.delete(client);
+        console.log(`[-] TV viewer left room [ ${client.roomCode} ]`);
         if (room.presenter) {
-          this.send(room.presenter, { type: 'viewer-left', id: client.id });
+          this.send(room.presenter, { type: 'viewer-left', id: client.id, viewersCount: room.viewers.size });
         }
       }
     }
@@ -166,7 +167,7 @@ class SimpleWebSocketServer {
     try {
       const data = JSON.parse(rawStr);
 
-      // Presenter registers and gets or sets room code
+      // Presenter registers
       if (data.type === 'register-presenter') {
         sender.role = 'presenter';
         let code = data.code || generatePairingCode();
@@ -174,19 +175,29 @@ class SimpleWebSocketServer {
           code = generatePairingCode();
         }
         sender.roomCode = code;
-        pairingRooms.set(code, { presenter: sender, viewers: new Set() });
 
-        console.log(`[+] Presenter created Room Code: [ ${code} ]`);
+        // Check if there was an existing room with viewers or create fresh
+        const existingRoom = pairingRooms.get(code);
+        const viewers = existingRoom ? existingRoom.viewers : new Set();
+        pairingRooms.set(code, { presenter: sender, viewers });
+
+        console.log(`[+] Presenter created / restored Room: [ ${code} ]`);
         this.send(sender, { type: 'room-created', code: code });
+
+        // If viewers are already in the room, notify presenter and viewers to link
+        for (const viewer of viewers) {
+          this.send(viewer, { type: 'join-success', code: code, presenterId: sender.id });
+          this.send(sender, { type: 'viewer-joined', id: viewer.id, viewersCount: viewers.size });
+        }
         return;
       }
 
-      // Viewer joins by room code OR auto-joins the active single room
+      // Viewer registers
       if (data.type === 'register-viewer') {
         sender.role = 'viewer';
         let targetCode = data.code;
 
-        // Auto-join if there's only 1 room active or code isn't passed
+        // Auto-join if there is only 1 room active, or if code isn't passed
         if (!targetCode && pairingRooms.size > 0) {
           targetCode = pairingRooms.keys().next().value;
         }
@@ -196,17 +207,30 @@ class SimpleWebSocketServer {
           sender.roomCode = targetCode;
           room.viewers.add(sender);
 
-          this.send(sender, { type: 'join-success', code: targetCode, presenterId: room.presenter.id });
-          this.send(room.presenter, { type: 'viewer-joined', id: sender.id, viewersCount: room.viewers.size });
-          console.log(`[+] TV joined room [ ${targetCode} ]`);
+          this.send(sender, { type: 'join-success', code: targetCode, presenterId: room.presenter ? room.presenter.id : null });
+          if (room.presenter) {
+            this.send(room.presenter, { type: 'viewer-joined', id: sender.id, viewersCount: room.viewers.size });
+          }
+          console.log(`[+] TV viewer connected to room [ ${targetCode} ]`);
         } else {
-          // If no active room yet, wait on standby
-          this.send(sender, { type: 'waiting-for-stream', availableRooms: Array.from(pairingRooms.keys()) });
+          // Put viewer into a default pending room or wait for presenter
+          let defaultRoomCode = pairingRooms.keys().next().value;
+          if (defaultRoomCode) {
+            const room = pairingRooms.get(defaultRoomCode);
+            sender.roomCode = defaultRoomCode;
+            room.viewers.add(sender);
+            this.send(sender, { type: 'join-success', code: defaultRoomCode, presenterId: room.presenter ? room.presenter.id : null });
+            if (room.presenter) {
+              this.send(room.presenter, { type: 'viewer-joined', id: sender.id, viewersCount: room.viewers.size });
+            }
+          } else {
+            this.send(sender, { type: 'waiting-for-stream', availableRooms: Array.from(pairingRooms.keys()) });
+          }
         }
         return;
       }
 
-      // WebRTC Signaling forwarding between paired presenter & viewers
+      // Direct WebRTC signaling forwarding between PC and TV
       if (data.target) {
         for (const client of this.clients) {
           if (client.id === data.target) {
@@ -264,12 +288,15 @@ const MIME_TYPES = {
 const server = http.createServer((req, res) => {
   let reqPath = req.url.split('?')[0];
 
-  // API endpoint to return server info and active code to clients
+  // API endpoint
   if (reqPath === '/api/info') {
     const ips = getLocalIpAddresses();
     const primaryIp = ips[0] ? ips[0].ip : 'localhost';
     const activeCode = pairingRooms.keys().next().value || null;
-    res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*'
+    });
     res.end(JSON.stringify({
       ip: primaryIp,
       port: CURRENT_PORT,
@@ -279,12 +306,10 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Friendly short URLs:
-  // /tv or /t -> tv.html
+  // Friendly TV endpoints
   if (reqPath === '/tv' || reqPath === '/t' || reqPath === '/tv.html') {
     reqPath = '/tv.html';
   } else if (reqPath === '/' || reqPath === '') {
-    // If request comes from a TV browser user agent, serve tv.html automatically!
     const userAgent = (req.headers['user-agent'] || '').toLowerCase();
     const isTV = userAgent.includes('smart-tv') ||
                  userAgent.includes('smarttv') ||
@@ -337,11 +362,9 @@ function startServer(port) {
     console.log(`  1. PC Presenter (Share Screen):`);
     console.log(`     👉 http://localhost${portStr}`);
     console.log(`\n  2. TV Browser (Smart TV / FireStick):`);
-    console.log(`     👉 Just type: http://${primaryIp}${portStr}/tv`);
-    console.log(`     (Or simply http://${primaryIp}${portStr} - Auto TV detection!)`);
-    console.log('\n========================================================');
-    console.log('  TVs connect automatically with 1-click or pairing code!');
-    console.log('========================================================\n');
+    console.log(`     👉 http://${primaryIp}${portStr}/tv`);
+    console.log(`     (Or http://${primaryIp}${portStr} - Auto TV detection)`);
+    console.log('\n========================================================\n');
   }).on('error', (err) => {
     if (err.code === 'EACCES' || err.code === 'EADDRINUSE') {
       if (port !== FALLBACK_PORT) {
