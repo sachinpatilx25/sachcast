@@ -1231,8 +1231,8 @@
       showToast('Link copied! Send it to your friends 🍿');
     }
 
-    // --- High-Quality WebRTC Optimization ---
-    const MAX_BITRATE_BPS = 14000000; // 14 Mbps optimal sweet spot: Pristine text clarity without router bufferbloat
+    // --- TV-Optimized WebRTC Bitrate (3.5 Mbps 1080p @ 30 FPS) ---
+    const MAX_BITRATE_BPS = 3500000; // 3.5 Mbps: Pristine 1080p text & video that Smart TVs decode in hardware smoothly without freezing
 
     async function applyHighQualityParameters(pc) {
       if (!pc || !pc.getSenders) return;
@@ -1246,11 +1246,11 @@
           }
           if (sender.track.kind === 'video') {
             params.encodings[0].maxBitrate = MAX_BITRATE_BPS;
-            params.encodings[0].maxFramerate = 60;
+            params.encodings[0].maxFramerate = 30; // 30 FPS: Butter-smooth TV framerate that never overheats TV chips
             params.encodings[0].priority = 'high';
           } else if (sender.track.kind === 'audio') {
             params.encodings[0].priority = 'high';
-            params.encodings[0].maxBitrate = 192000;
+            params.encodings[0].maxBitrate = 128000;
           }
           await sender.setParameters(params);
         } catch (err) {
@@ -1636,9 +1636,9 @@
           conn.dc.send(JSON.stringify({ type: 'ping', t: now }));
         }
       });
-    }, 1000);
+    }, 3000);
 
-    // Periodic quality maintenance: locks 60 FPS & 14 Mbps on active streams
+    // Periodic quality maintenance: locks 30 FPS & 3.5 Mbps on active streams
     setInterval(() => {
       nativeConnections.forEach((conn) => {
         if (conn.pc && (conn.pc.iceConnectionState === 'connected' || conn.pc.iceConnectionState === 'completed')) {
@@ -1699,7 +1699,7 @@
         }
         let stream = null;
         try {
-          // 1. Pristine 1080p 60fps video + Zero-DSP direct 48kHz stereo system audio
+          // 1. Crystal-clear 1080p 30fps video + Direct 48kHz stereo system audio
           // Using cursor: 'motion' prevents Windows DWM / MPO hardware cursor blackouts on hover
           stream = await navigator.mediaDevices.getDisplayMedia({
             video: {
@@ -1707,7 +1707,7 @@
               displaySurface: 'monitor',
               width: { ideal: 1920, max: 1920 },
               height: { ideal: 1080, max: 1080 },
-              frameRate: { ideal: 60, max: 60 }
+              frameRate: { ideal: 30, max: 30 }
             },
             audio: {
               echoCancellation: false,
@@ -1727,7 +1727,7 @@
                 displaySurface: 'monitor',
                 width: { ideal: 1920, max: 1920 },
                 height: { ideal: 1080, max: 1080 },
-                frameRate: { ideal: 60, max: 60 }
+                frameRate: { ideal: 30, max: 30 }
               },
               audio: true
             });
@@ -1740,7 +1740,7 @@
                   displaySurface: 'monitor',
                   width: { ideal: 1920, max: 1920 },
                   height: { ideal: 1080, max: 1080 },
-                  frameRate: { ideal: 60, max: 60 }
+                  frameRate: { ideal: 30, max: 30 }
                 },
                 audio: false
               });

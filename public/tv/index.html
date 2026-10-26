@@ -65,9 +65,6 @@
       border: none;
       outline: none;
       pointer-events: none;
-      transform: translateZ(0);
-      backface-visibility: hidden;
-      will-change: transform;
     }
 
     #unmuteFloatingBtn {
@@ -77,24 +74,16 @@
       transform: translateX(-50%);
       background: #ffffff;
       color: #000000;
-      padding: 1rem 2rem;
+      padding: 0.9rem 1.8rem;
       border-radius: 9999px;
       font-weight: 700;
-      font-size: 1.15rem;
-      border: none;
+      font-size: 1.1rem;
+      border: 2px solid #000000;
       cursor: pointer;
-      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.9), 0 0 20px rgba(255, 255, 255, 0.9);
       z-index: 99999;
       display: none;
       align-items: center;
       gap: 0.75rem;
-      animation: pulseBtn 1.5s infinite;
-    }
-
-    @keyframes pulseBtn {
-      0% { transform: translateX(-50%) scale(1); }
-      50% { transform: translateX(-50%) scale(1.06); }
-      100% { transform: translateX(-50%) scale(1); }
     }
 
     .tv-toast {
@@ -102,19 +91,17 @@
       top: 2rem;
       left: 50%;
       transform: translateX(-50%) translateY(-20px);
-      background: rgba(10, 10, 10, 0.92);
+      background: #141414;
       color: #ffffff;
-      padding: 0.85rem 1.75rem;
+      padding: 0.75rem 1.5rem;
       border-radius: 9999px;
-      font-size: 1.15rem;
+      font-size: 1.1rem;
       font-weight: 600;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      backdrop-filter: blur(16px);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.85);
+      border: 1px solid #333333;
       z-index: 99999;
       pointer-events: none;
       opacity: 0;
-      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: all 0.25s ease;
     }
 
     .tv-toast.show {
@@ -321,36 +308,16 @@
       if (document.visibilityState === 'visible') requestWakeLock();
     });
 
-    // Zero playout delay & zero jitter buffer for BOTH audio and video
+    // Allow Smart TV hardware decoder to manage its jitter buffer smoothly without 100% CPU lockup
     function tuneMediaReceivers(pc) {
-      if (!pc || !pc.getReceivers) return;
-      pc.getReceivers().forEach(receiver => {
-        if (receiver.track) {
-          if ('jitterBufferTarget' in receiver) {
-            try { receiver.jitterBufferTarget = 0; } catch (e) {}
-          }
-          if ('playoutDelayHint' in receiver) {
-            try { receiver.playoutDelayHint = 0; } catch (e) {}
-          }
-        }
-      });
+      // Default browser jitter buffer allows hardware decode pipeline to run without stalling
     }
 
-    // Audio Context & Unmute Handler: Ensures sound is NEVER muted
-    let audioCtx = null;
+    // Direct HTML5 video audio unmuting (no AudioContext deadlock on TV OS)
     let audioUnlocked = false;
 
     function unlockAudio() {
       audioUnlocked = true;
-      try {
-        if (!audioCtx) {
-          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx.state === 'suspended') {
-          audioCtx.resume();
-        }
-      } catch (e) {}
-
       tvVideo.muted = false;
       tvVideo.volume = 1.0;
 
@@ -846,29 +813,35 @@
     window.addEventListener('touchstart', handleUserGesture, { passive: true });
     window.addEventListener('dblclick', toggleFullScreen);
 
-    // Send real-time timeline progress back to presenter cockpit
-    function sendMediaStatus() {
+    // Send real-time timeline progress back to presenter cockpit (throttled to 1s to prevent TV CPU freeze)
+    let lastMediaStatusTime = 0;
+    function sendMediaStatus(force = false) {
       if (playbackMode !== 'media') return;
-      const payload = JSON.stringify({
+      const now = performance.now();
+      if (!force && (now - lastMediaStatusTime < 1000)) return;
+      lastMediaStatusTime = now;
+
+      const dataObj = {
         type: 'media-status',
-        currentTime: tvVideo.currentTime,
-        duration: tvVideo.duration || 0,
+        currentTime: Math.floor(tvVideo.currentTime || 0),
+        duration: Math.floor(tvVideo.duration || 0),
         paused: tvVideo.paused,
         volume: tvVideo.volume,
         title: currentMediaTitle
-      });
+      };
+      const payload = JSON.stringify(dataObj);
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(payload);
       }
       if (dataConn && dataConn.open) {
-        try { dataConn.send(JSON.parse(payload)); } catch(e) {}
+        try { dataConn.send(dataObj); } catch(e) {}
       }
     }
 
-    tvVideo.addEventListener('timeupdate', sendMediaStatus);
-    tvVideo.addEventListener('play', sendMediaStatus);
-    tvVideo.addEventListener('pause', sendMediaStatus);
-    tvVideo.addEventListener('seeked', sendMediaStatus);
+    tvVideo.addEventListener('timeupdate', () => sendMediaStatus(false));
+    tvVideo.addEventListener('play', () => sendMediaStatus(true));
+    tvVideo.addEventListener('pause', () => sendMediaStatus(true));
+    tvVideo.addEventListener('seeked', () => sendMediaStatus(true));
 
     tvVideo.addEventListener('ended', () => {
       if (playbackMode === 'media') {
