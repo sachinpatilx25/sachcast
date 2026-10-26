@@ -1248,11 +1248,8 @@
             params.encodings[0].maxBitrate = MAX_BITRATE_BPS;
             params.encodings[0].maxFramerate = 60;
             params.encodings[0].priority = 'high';
-            params.encodings[0].networkPriority = 'high';
-            params.degradationPreference = 'maintain-framerate';
           } else if (sender.track.kind === 'audio') {
             params.encodings[0].priority = 'high';
-            params.encodings[0].networkPriority = 'high';
             params.encodings[0].maxBitrate = 192000;
           }
           await sender.setParameters(params);
@@ -1316,6 +1313,7 @@
     }
 
     function tryLocalWebSocket() {
+      if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${wsProtocol}//${window.location.host}`;
       console.log('[Signaling] Connecting to LAN WebSocket:', wsUrl);
@@ -1328,7 +1326,9 @@
           if (!socketConnected) {
             console.log('[Signaling] Local WS timeout. Falling back to PeerJS Cloud...');
             try { ws.close(); } catch(e) {}
-            initPeerJS();
+            if (!peer || peer.destroyed) {
+              initPeerJS();
+            }
           }
         }, 2000);
 
@@ -1352,20 +1352,27 @@
 
         ws.onclose = () => {
           if (signalingMode === 'lan') {
-            console.log('[Signaling] Local WS disconnected. Falling back to PeerJS...');
-            signalingMode = 'cloud';
-            initPeerJS();
+            console.log('[Signaling] Local WS disconnected.');
+            document.getElementById('statusDot').classList.remove('live');
+            document.getElementById('statusText').innerText = 'Reconnecting...';
+            if (!peer || peer.destroyed) {
+              initPeerJS();
+            }
           }
         };
 
         ws.onerror = () => {
           if (!socketConnected) {
             clearTimeout(wsTimeout);
-            initPeerJS();
+            if (!peer || peer.destroyed) {
+              initPeerJS();
+            }
           }
         };
       } catch (e) {
-        initPeerJS();
+        if (!peer || peer.destroyed) {
+          initPeerJS();
+        }
       }
     }
 
@@ -1428,15 +1435,19 @@
         if (msg.type === 'signal-answer' && msg.from) {
           const conn = nativeConnections.get(msg.from);
           if (conn && conn.pc) {
-            await conn.pc.setRemoteDescription(new RTCSessionDescription(msg.answer));
-            // Drain queued ICE candidates safely
-            if (conn.pendingCandidates && conn.pendingCandidates.length > 0) {
-              for (const cand of conn.pendingCandidates) {
-                await conn.pc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
+            if (conn.pc.signalingState === 'have-local-offer') {
+              try {
+                await conn.pc.setRemoteDescription(new RTCSessionDescription(msg.answer));
+                // Drain queued ICE candidates safely
+                const candidates = conn.pendingCandidates.splice(0, conn.pendingCandidates.length);
+                for (const cand of candidates) {
+                  try { await conn.pc.addIceCandidate(new RTCIceCandidate(cand)); } catch (e) {}
+                }
+                await applyHighQualityParameters(conn.pc);
+              } catch (e) {
+                console.warn('Error setting remote answer:', e);
               }
-              conn.pendingCandidates = [];
             }
-            await applyHighQualityParameters(conn.pc);
           }
           return;
         }
@@ -1445,8 +1456,8 @@
         if (msg.type === 'signal-candidate' && msg.from && msg.candidate) {
           const conn = nativeConnections.get(msg.from);
           if (conn && conn.pc) {
-            if (conn.pc.remoteDescription) {
-              conn.pc.addIceCandidate(new RTCIceCandidate(msg.candidate)).catch(() => {});
+            if (conn.pc.remoteDescription && conn.pc.remoteDescription.type) {
+              try { await conn.pc.addIceCandidate(new RTCIceCandidate(msg.candidate)); } catch (e) {}
             } else {
               // Queue candidate until remote description is set
               conn.pendingCandidates.push(msg.candidate);
@@ -1525,7 +1536,7 @@
 
     // --- PeerJS Cloud Fallback ---
     function initPeerJS() {
-      if (peer) return;
+      if (peer && !peer.destroyed) return;
       signalingMode = 'cloud';
       const presenterPeerId = 'sachcast-host-' + roomCode;
       console.log('[Signaling] Initializing PeerJS Cloud for ID:', presenterPeerId);
@@ -1580,6 +1591,8 @@
 
       peer.on('error', (err) => {
         if (err.type === 'unavailable-id') {
+          try { peer.destroy(); } catch (e) {}
+          peer = null;
           roomCode = Math.floor(1000 + Math.random() * 9000).toString();
           document.getElementById('roomCodeDisplay').innerText = roomCode;
           tvUrl = `${window.location.origin}/tv?room=${roomCode}`;
@@ -2250,9 +2263,9 @@
       }
     });
 
-    // Auto-reconnect to LAN WebSocket if temporarily interrupted
+    // Auto-reconnect to LAN WebSocket if disconnected
     setInterval(() => {
-      if (signalingMode === 'cloud' || !ws || ws.readyState === WebSocket.CLOSED) {
+      if (!ws || ws.readyState === WebSocket.CLOSED) {
         tryLocalWebSocket();
       }
     }, 5000);

@@ -383,15 +383,17 @@ function setupWebSocket(wss) {
           const viewers = existingRoom ? existingRoom.viewers : new Set();
 
           // Auto-adopt any waiting viewers who connected before the presenter!
+          const roomsToDelete = [];
           for (const [rCode, rData] of rooms.entries()) {
             if (rCode !== code && rData.presenter === null && rData.viewers && rData.viewers.size > 0) {
               for (const v of rData.viewers) {
                 v.roomCode = code;
                 viewers.add(v);
               }
-              rooms.delete(rCode);
+              roomsToDelete.push(rCode);
             }
           }
+          roomsToDelete.forEach(rc => rooms.delete(rc));
 
           rooms.set(code, { presenter: ws, viewers });
 
@@ -426,12 +428,14 @@ function setupWebSocket(wss) {
           ws.role = 'viewer';
           let targetCode = data.code;
 
-          // Auto-join active presenter room if available (Zero typing needed on TV!)
-          const activePresenterRoom = Array.from(rooms.entries()).find(([_, r]) => r.presenter !== null);
-          if (activePresenterRoom) {
-            targetCode = activePresenterRoom[0];
-          } else if (!targetCode || targetCode === defaultRoomCode) {
-            targetCode = rooms.keys().next().value || defaultRoomCode;
+          // If no specific code was requested or code is default, join active presenter room
+          if (!targetCode || targetCode === defaultRoomCode) {
+            const activePresenterRoom = Array.from(rooms.entries()).find(([_, r]) => r.presenter !== null);
+            if (activePresenterRoom) {
+              targetCode = activePresenterRoom[0];
+            } else {
+              targetCode = defaultRoomCode;
+            }
           }
 
           ws.roomCode = targetCode;
@@ -501,6 +505,9 @@ function setupWebSocket(wss) {
           for (const viewer of room.viewers) {
             safeSend(viewer, { type: 'presenter-disconnected' });
           }
+          if (room.viewers.size === 0) {
+            rooms.delete(ws.roomCode);
+          }
         } else {
           room.viewers.delete(ws);
           console.log(`[-] TV viewer disconnected: [ ${ws.deviceName} ]`);
@@ -510,6 +517,9 @@ function setupWebSocket(wss) {
               id: ws.id,
               viewersCount: room.viewers.size
             });
+          }
+          if (!room.presenter && room.viewers.size === 0) {
+            rooms.delete(ws.roomCode);
           }
         }
       }

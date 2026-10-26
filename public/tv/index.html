@@ -377,16 +377,13 @@
     window.addEventListener('touchstart', unlockAudio, { passive: true });
     window.addEventListener('keydown', unlockAudio, { passive: true });
 
-    // Auto-resume if TV browser temporarily pauses
-    tvVideo.addEventListener('stalled', () => {
-      if (tvVideo.srcObject && !tvVideo.paused) tvVideo.play().catch(() => {});
-    });
-    tvVideo.addEventListener('waiting', () => {
-      if (tvVideo.srcObject && !tvVideo.paused) tvVideo.play().catch(() => {});
-    });
-    tvVideo.addEventListener('pause', () => {
-      if (tvVideo.srcObject && standbyScreen.style.display === 'none') {
-        tvVideo.play().catch(() => {});
+    // Auto-resume if TV tab is brought back to front
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        requestWakeLock();
+        if (tvVideo.srcObject && tvVideo.paused && standbyScreen.style.display === 'none') {
+          tvVideo.play().catch(() => {});
+        }
       }
     });
 
@@ -400,6 +397,7 @@
     }
 
     function tryLocalWebSocket() {
+      if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${wsProtocol}//${window.location.host}`;
       console.log('[TV Signaling] Connecting to LAN WebSocket:', wsUrl);
@@ -412,7 +410,9 @@
           if (!connected) {
             console.log('[TV Signaling] Local WS timeout. Falling back to PeerJS Cloud...');
             try { ws.close(); } catch(e) {}
-            initTVPeer();
+            if (!peer || peer.destroyed) {
+              initTVPeer();
+            }
           }
         }, 2000);
 
@@ -439,20 +439,27 @@
 
         ws.onclose = () => {
           if (signalingMode === 'lan') {
-            console.log('[TV Signaling] WS closed. Falling back to PeerJS...');
-            signalingMode = 'cloud';
-            initTVPeer();
+            console.log('[TV Signaling] WS closed.');
+            statusDot.style.background = '#888888';
+            statusLabel.innerText = 'Reconnecting...';
+            if (!peer || peer.destroyed) {
+              initTVPeer();
+            }
           }
         };
 
         ws.onerror = () => {
           if (!connected) {
             clearTimeout(timeout);
-            initTVPeer();
+            if (!peer || peer.destroyed) {
+              initTVPeer();
+            }
           }
         };
       } catch (e) {
-        initTVPeer();
+        if (!peer || peer.destroyed) {
+          initTVPeer();
+        }
       }
     }
 
@@ -582,8 +589,6 @@
       }
 
       nativePc = new RTCPeerConnection(rtcIceConfig);
-      pendingCandidates = [];
-      remoteStream = null;
 
       nativePc.ontrack = (event) => {
         console.log('[WebRTC LAN] Remote track received:', event.track.kind);
@@ -591,7 +596,9 @@
         tvVideo.removeAttribute('src');
         if (event.streams && event.streams[0]) {
           remoteStream = event.streams[0];
-          tvVideo.srcObject = remoteStream;
+          if (tvVideo.srcObject !== remoteStream) {
+            tvVideo.srcObject = remoteStream;
+          }
         } else {
           if (!remoteStream) {
             remoteStream = new MediaStream();
@@ -636,11 +643,12 @@
         await nativePc.setRemoteDescription(new RTCSessionDescription(offer));
         tuneMediaReceivers(nativePc);
 
-        if (pendingCandidates.length > 0) {
-          for (const cand of pendingCandidates) {
-            await nativePc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
-          }
-          pendingCandidates = [];
+        // Safely drain all candidates that arrived before remoteDescription was set
+        const queued = pendingCandidates.splice(0, pendingCandidates.length);
+        for (const cand of queued) {
+          try {
+            await nativePc.addIceCandidate(new RTCIceCandidate(cand));
+          } catch (e) {}
         }
 
         const answer = await nativePc.createAnswer();
@@ -673,9 +681,7 @@
 
     // --- PeerJS Cloud Fallback ---
     function initTVPeer() {
-      if (peer) {
-        try { peer.destroy(); } catch (e) {}
-      }
+      if (peer && !peer.destroyed) return;
       signalingMode = 'cloud';
       const viewerPeerId = 'sachcast-tv-' + roomCode + '-' + Math.random().toString(36).substring(2, 7);
       console.log('[PeerJS Cloud] Starting TV peer with ID:', viewerPeerId);
@@ -702,7 +708,9 @@
           hideStandby();
           tvVideo.removeAttribute('src');
           remoteStream = stream;
-          tvVideo.srcObject = remoteStream;
+          if (tvVideo.srcObject !== remoteStream) {
+            tvVideo.srcObject = remoteStream;
+          }
           tuneMediaReceivers(call.peerConnection);
 
           tvVideo.muted = false;
@@ -890,13 +898,13 @@
     });
 
     setInterval(() => {
-      if (signalingMode === 'cloud' || !ws || ws.readyState === WebSocket.CLOSED) {
+      if (!ws || ws.readyState === WebSocket.CLOSED) {
         tryLocalWebSocket();
       }
       if (signalingMode === 'cloud' && (!dataConn || !dataConn.open)) {
         connectToHostPeerJS();
       }
-    }, 4000);
+    }, 5000);
 
     initTVReceiver();
   </script>
