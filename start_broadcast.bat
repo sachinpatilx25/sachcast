@@ -1,8 +1,9 @@
 @echo off
-title AirCast Wireless Screen Broadcast
+title SachCast - Wireless Screen Broadcaster
 cd /d "%~dp0"
-echo ========================================================
-echo   Starting AirCast Wireless Screen Broadcast Server...
-echo ========================================================
+echo =================================================================
+echo   Starting SachCast Screen Broadcaster (Dual Port 80 & 3000)...
+echo =================================================================
+echo.
 node server.js
 pause
