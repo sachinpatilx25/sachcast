@@ -1016,9 +1016,14 @@
             </button>
           </div>
 
-          <button class="btn-outline" onclick="sendFlashPing()">
-            Ping Friends 👋
-          </button>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <button class="btn-outline" id="aspectRatioBtn" onclick="cyclePresenterAspectRatio()" title="Switch TV Aspect Ratio: Fit / Stretch (No Black Bars) / Zoom">
+              📺 TV Fit: Original
+            </button>
+            <button class="btn-outline" onclick="sendFlashPing()">
+              Ping Friends 👋
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1043,9 +1048,14 @@
                 <span class="cockpit-badge"><span class="pulse-red"></span> LIVE ON TV</span>
                 <span class="cockpit-filename" id="cockpitFileName">Ready to Cast</span>
               </div>
-              <button class="btn-outline" style="font-size: 0.75rem; padding: 0.35rem 0.85rem;" onclick="sendUnmuteSound()" title="Wake up and unmute TV sound">
-                🔊 Unmute TV Remotely
-              </button>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <button class="btn-outline" id="aspectRatioBtnMedia" style="font-size: 0.75rem; padding: 0.35rem 0.85rem;" onclick="cyclePresenterAspectRatio()" title="Switch TV Aspect Ratio: Fit / Stretch (No Black Bars) / Zoom">
+                  📺 TV Fit: Original
+                </button>
+                <button class="btn-outline" style="font-size: 0.75rem; padding: 0.35rem 0.85rem;" onclick="sendUnmuteSound()" title="Wake up and unmute TV sound">
+                  🔊 Unmute TV Remotely
+                </button>
+              </div>
             </div>
 
             <div class="timeline-wrap">
@@ -1705,8 +1715,8 @@
             video: {
               cursor: 'motion',
               displaySurface: 'monitor',
-              width: { ideal: 1920, max: 1920 },
-              height: { ideal: 1080, max: 1080 },
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
               frameRate: { ideal: 30, max: 30 }
             },
             audio: {
@@ -1725,8 +1735,8 @@
               video: {
                 cursor: 'motion',
                 displaySurface: 'monitor',
-                width: { ideal: 1920, max: 1920 },
-                height: { ideal: 1080, max: 1080 },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
                 frameRate: { ideal: 30, max: 30 }
               },
               audio: true
@@ -1738,8 +1748,8 @@
                 video: {
                   cursor: 'motion',
                   displaySurface: 'monitor',
-                  width: { ideal: 1920, max: 1920 },
-                  height: { ideal: 1080, max: 1080 },
+                  width: { ideal: 1920 },
+                  height: { ideal: 1080 },
                   frameRate: { ideal: 30, max: 30 }
                 },
                 audio: false
@@ -1926,6 +1936,57 @@
         if (conn.open) conn.send({ type: 'unmute-sound' });
       });
       showToast('Unmute signal sent to TV 🔊');
+    }
+
+    // --- TV Aspect Ratio Control from Host Cockpit ---
+    let currentTvAspectRatio = 'contain';
+
+    function cyclePresenterAspectRatio() {
+      if (currentTvAspectRatio === 'contain') {
+        currentTvAspectRatio = 'fill';
+      } else if (currentTvAspectRatio === 'fill') {
+        currentTvAspectRatio = 'cover';
+      } else {
+        currentTvAspectRatio = 'contain';
+      }
+      updateAspectRatioUI();
+      sendAspectRatioToTv(currentTvAspectRatio);
+    }
+
+    function updateAspectRatioUI() {
+      const labels = {
+        contain: '📺 TV Fit: Original',
+        fill: '↔️ TV Fit: Stretch (No Bars)',
+        cover: '🔍 TV Fit: Zoom (Crop)'
+      };
+      const label = labels[currentTvAspectRatio] || '📺 TV Fit';
+      const btn1 = document.getElementById('aspectRatioBtn');
+      if (btn1) btn1.innerText = label;
+      const btn2 = document.getElementById('aspectRatioBtnMedia');
+      if (btn2) btn2.innerText = label;
+    }
+
+    function sendAspectRatioToTv(mode) {
+      const msg = { type: 'set-aspect-ratio', fit: mode };
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(msg));
+      }
+      dataConnections.forEach(conn => {
+        if (conn.open) {
+          try { conn.send(msg); } catch (e) {}
+        }
+      });
+      nativeConnections.forEach(conn => {
+        if (conn.dc && conn.dc.readyState === 'open') {
+          try { conn.dc.send(JSON.stringify(msg)); } catch (e) {}
+        }
+      });
+      const names = {
+        contain: 'Fit (Original Proportions)',
+        fill: 'Stretch (No Black Bars)',
+        cover: 'Zoom (Crop)'
+      };
+      showToast(`TV Aspect Ratio set to: ${names[mode] || mode}`);
     }
 
     async function startRealtimeFileCast(file) {
