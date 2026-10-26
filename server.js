@@ -202,6 +202,18 @@ function setupWebSocket(wss) {
 
           const existingRoom = rooms.get(code);
           const viewers = existingRoom ? existingRoom.viewers : new Set();
+
+          // Auto-adopt any waiting viewers who connected before the presenter!
+          for (const [rCode, rData] of rooms.entries()) {
+            if (rCode !== code && rData.presenter === null && rData.viewers && rData.viewers.size > 0) {
+              for (const v of rData.viewers) {
+                v.roomCode = code;
+                viewers.add(v);
+              }
+              rooms.delete(rCode);
+            }
+          }
+
           rooms.set(code, { presenter: ws, viewers });
 
           console.log(`[+] Presenter connected. Room: [ ${code} ] from ${clientIp}`);

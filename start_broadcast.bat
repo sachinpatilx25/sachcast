@@ -10,5 +10,6 @@ if not exist "node_modules\ws" (
   echo [+] First-time setup: Installing fast WebSocket dependency...
   cmd /c npm install --no-fund --no-audit
 )
+start "" "http://localhost:3000"
 node server.js
 pause
